@@ -3,9 +3,9 @@ use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use crate::kdtree::KDTree;
 use crate::point::Point;
 use crate::wrapper::Wrapper;
-use crate::wspdparallel::{WspdFilter};
+use crate::wspdparallel::WspdFilter;
 use std::cmp::max;
-use std::sync::{Mutex, Arc};
+use std::sync::{Arc, Mutex};
 
 //Declaring the Well Separated Struct
 #[derive(Debug)]
@@ -30,78 +30,79 @@ impl<'a> Wsp<'a> {
 //--------------------------------------------------------------------------------
 //Computing Well Separated Pairs Sequentially
 //--------------------------------------------------------------------------------
-struct WspdNormalSerial<'a>{
+struct WspdNormalSerial<'a> {
     out: &'a mut Vec<Wsp<'a>>,
 }
-impl<'a> WspdFilter for WspdNormalSerial <'a>{
-    fn start(&self,tree: &KDTree) ->bool {
+impl<'a> WspdFilter for WspdNormalSerial<'a> {
+    fn start(&self, tree: &KDTree) -> bool {
         true
     }
-    fn run(&self, left: &KDTree,right: &KDTree) {
+    fn run(&self, left: &KDTree, right: &KDTree) {
         self.out.push(Wsp::add(left, right));
     }
-    fn move_on(&self,left: &KDTree,right: &KDTree)->bool {
+    fn move_on(&self, left: &KDTree, right: &KDTree) -> bool {
         true
     }
 
-    fn well_separated(&self,left: &KDTree,right: &KDTree)->bool{
+    fn well_separated(&self, left: &KDTree, right: &KDTree) -> bool {
         return geometrically_separated(left, right, 2.);
     }
 }
 
 impl<'a> WspdNormalSerial<'a> {
-    fn new(out:&'a mut Vec<Wsp<'a>>) ->Self{
+    fn new(out: &'a mut Vec<Wsp<'a>>) -> Self {
         Self { out }
     }
 }
 
-fn find_wsp_serial<'a,T>(
-    left: &'a KDTree,
-    right: &'a KDTree,
-    s: f64,
-    f: &'a T,
-) where T:WspdFilter {
+fn find_wsp_serial<'a, T>(left: &'a KDTree, right: &'a KDTree, s: f64, f: &'a T)
+where
+    T: WspdFilter,
+{
     if !f.move_on(left, right) {
         return;
     }
 
     if well_separated(left, right, 2.0) {
-
     } else {
         if left.is_leaf() && right.is_leaf() {
             panic!("Leaves not well separated")
         } else if left.is_leaf() {
-            find_wsp_serial(&right.left_node.as_ref().unwrap(), left, 2.0,f);
-            find_wsp_serial(&right.right_node.as_ref().unwrap(), left, 2.0,f);
+            find_wsp_serial(&right.left_node.as_ref().unwrap(), left, 2.0, f);
+            find_wsp_serial(&right.right_node.as_ref().unwrap(), left, 2.0, f);
         } else if right.is_leaf() {
-            find_wsp_serial(&left.left_node.as_ref().unwrap(), right, 2.0,f);
-            find_wsp_serial(&left.right_node.as_ref().unwrap(), right, 2.0,f);
+            find_wsp_serial(&left.left_node.as_ref().unwrap(), right, 2.0, f);
+            find_wsp_serial(&left.right_node.as_ref().unwrap(), right, 2.0, f);
         } else {
             if left.lMax() > right.lMax() {
-                find_wsp_serial(&left.left_node.as_ref().unwrap(), right, 2.0,f);
-                find_wsp_serial(&left.right_node.as_ref().unwrap(), right, 2.0,f);
+                find_wsp_serial(&left.left_node.as_ref().unwrap(), right, 2.0, f);
+                find_wsp_serial(&left.right_node.as_ref().unwrap(), right, 2.0, f);
             } else {
-                find_wsp_serial(&right.left_node.as_ref().unwrap(), left, 2.0,f);
-                find_wsp_serial(&right.right_node.as_ref().unwrap(), left, 2.0,f);
+                find_wsp_serial(&right.left_node.as_ref().unwrap(), left, 2.0, f);
+                find_wsp_serial(&right.right_node.as_ref().unwrap(), left, 2.0, f);
             }
         }
     }
 }
 
-fn computeWspdSerial<'a,T>(
-    tree: &'a KDTree,
-    s: &'a f64,
-    f: &T,
-) where T:WspdFilter {
-    if !tree.is_leaf() &&f.start(tree){
+fn computeWspdSerial<'a, T>(tree: &'a KDTree, s: &'a f64, f: &T)
+where
+    T: WspdFilter,
+{
+    if !tree.is_leaf() && f.start(tree) {
         computeWspdSerial(tree.left_node.as_ref().unwrap(), s, f);
         computeWspdSerial(tree.right_node.as_ref().unwrap(), s, f);
 
-        find_wsp_serial(tree.left_node.as_ref().unwrap(), tree.right_node.as_ref().unwrap(), 2.,f);
+        find_wsp_serial(
+            tree.left_node.as_ref().unwrap(),
+            tree.right_node.as_ref().unwrap(),
+            2.,
+            f,
+        );
     }
 }
 
-pub fn wspd_serial(tree: &KDTree,s: f64) -> Vec<Wsp> {
+pub fn wspd_serial(tree: &KDTree, s: f64) -> Vec<Wsp> {
     let mut out = Vec::new();
     let wg = WspdNormalSerial::new(&mut out);
     computeWspdSerial(tree, &2., &wg);
@@ -110,56 +111,54 @@ pub fn wspd_serial(tree: &KDTree,s: f64) -> Vec<Wsp> {
 //--------------------------------------------------------------------------------
 //Computing Well Separated Pairs Parallel
 //--------------------------------------------------------------------------------
-struct WspdNormalParallel<'a>{
+struct WspdNormalParallel<'a> {
     out: &'a mut Arc<Mutex<Vec<Wsp<'a>>>>,
 }
 
 impl<'a> WspdFilter for WspdNormalParallel<'a> {
-    fn start(&self,tree: &KDTree) ->bool {
+    fn start(&self, tree: &KDTree) -> bool {
         true
     }
 
-    fn run(&self,left: &KDTree,right: &KDTree) {
+    fn run(&self, left: &KDTree, right: &KDTree) {
         let worker_id = rayon::current_thread_index().unwrap();
         let mut worker_out = self.out[worker_id].lock().unwrap();
-        worker_out.push(Wsp{u:left,v:right});
+        worker_out.push(Wsp { u: left, v: right });
     }
 
-    fn move_on(&self,left: &KDTree,right: &KDTree)->bool {
-        true 
+    fn move_on(&self, left: &KDTree, right: &KDTree) -> bool {
+        true
     }
 
-    fn well_separated(&self,left: &KDTree,right: &KDTree)->bool {
+    fn well_separated(&self, left: &KDTree, right: &KDTree) -> bool {
         return geometrically_separated(left, right, 2.);
     }
 }
 
 impl<'a> WspdNormalParallel<'a> {
-    fn new(&self,n:usize ) ->Self {
+    fn new(&self, n: usize) -> Self {
         //let procs = rayon::current_num_threads();
         //let out = (0..procs).into_par_iter().map(|_| Arc::new(Mutex::new(Vec::with_capacity(n))));
         let out = Arc::new(Mutex::new(Vec::with_capacity(n)));
         Self { out: &mut out }
     }
 
-    fn collect_pairs(&self) ->Vec<Wsp> {
+    fn collect_pairs(&self) -> Vec<Wsp> {
         let mut pairs = Vec::new();
         for worker_out in self.out {
             let worker_pairs = worker_out.lock().unwrap();
             pairs.append(worker_pairs)
-        } pairs
+        }
+        pairs
     }
 }
 
-pub fn find_wsp_parallel<'a,T>(
-    left: &'a KDTree,
-    right: &'a KDTree,
-    s: f64,
-    f: &'a T,
-)
-where T:WspdFilter + std::marker::Sync{
+pub fn find_wsp_parallel<'a, T>(left: &'a KDTree, right: &'a KDTree, s: f64, f: &'a T)
+where
+    T: WspdFilter + std::marker::Sync,
+{
     if left.points.len() + right.points.len() < 2000 {
-        find_wsp_serial(left, right,2., f);
+        find_wsp_serial(left, right, 2., f);
     } else {
         if well_separated(left, right, 2.0) {
             //bucket.push(Wsp { u: left, v: right });
@@ -168,38 +167,24 @@ where T:WspdFilter + std::marker::Sync{
                 panic!("Leaves not well separated")
             } else if left.is_leaf() {
                 rayon::join(
-                    || find_wsp_parallel(&right.left_node.as_ref().unwrap(), left, 2.0,f),
-                    || find_wsp_parallel(&right.right_node.as_ref().unwrap(), left, 2.0,f),
+                    || find_wsp_parallel(&right.left_node.as_ref().unwrap(), left, 2.0, f),
+                    || find_wsp_parallel(&right.right_node.as_ref().unwrap(), left, 2.0, f),
                 );
             } else if right.is_leaf() {
                 rayon::join(
-                    || find_wsp_parallel(&left.left_node.as_ref().unwrap(), right, 2.0,f),
-                    || find_wsp_parallel(&left.right_node.as_ref().unwrap(), right, 2.0,f),
+                    || find_wsp_parallel(&left.left_node.as_ref().unwrap(), right, 2.0, f),
+                    || find_wsp_parallel(&left.right_node.as_ref().unwrap(), right, 2.0, f),
                 );
             } else {
                 if left.lMax() > right.lMax() {
                     rayon::join(
-                        || find_wsp_parallel(&left.left_node.as_ref().unwrap(), right, 2.0,f),
-                        || {
-                            find_wsp_parallel(
-                                &left.right_node.as_ref().unwrap(),
-                                right,
-                                2.0,
-                                f
-                            )
-                        },
+                        || find_wsp_parallel(&left.left_node.as_ref().unwrap(), right, 2.0, f),
+                        || find_wsp_parallel(&left.right_node.as_ref().unwrap(), right, 2.0, f),
                     );
                 } else {
                     rayon::join(
-                        || find_wsp_parallel(&right.left_node.as_ref().unwrap(), left, 2.0,f),
-                        || {
-                            find_wsp_parallel(
-                                &right.right_node.as_ref().unwrap(),
-                                left,
-                                2.0,
-                                f
-                            )
-                        },
+                        || find_wsp_parallel(&right.left_node.as_ref().unwrap(), left, 2.0, f),
+                        || find_wsp_parallel(&right.right_node.as_ref().unwrap(), left, 2.0, f),
                     );
                 }
             }
@@ -207,36 +192,26 @@ where T:WspdFilter + std::marker::Sync{
     }
 }
 
-pub fn computeWspdParallel<'a,T>(
-    tree: &'a KDTree,
-    s: &'a f64,
-    f: &T,
-) where T:WspdFilter + std::marker::Sync  {
-    if tree.size()< 2000{
+pub fn computeWspdParallel<'a, T>(tree: &'a KDTree, s: &'a f64, f: &T)
+where
+    T: WspdFilter + std::marker::Sync,
+{
+    if tree.size() < 2000 {
         computeWspdSerial(tree, s, f);
     }
-    if !(tree.is_leaf() ) && true {
+    if !(tree.is_leaf()) && true {
         rayon::join(
-            || {
-                computeWspdParallel(
-                    &tree.left_node.as_ref().unwrap(),
-                    s,
-                    f,
-                )
-            },
-            || {
-                computeWspdParallel(
-                    &tree.right_node.as_ref().unwrap(),
-                    s,
-                    f,
-                )
-            },
+            || computeWspdParallel(&tree.left_node.as_ref().unwrap(), s, f),
+            || computeWspdParallel(&tree.right_node.as_ref().unwrap(), s, f),
         );
-        find_wsp_parallel(tree.left_node.as_ref().unwrap(), tree.right_node.as_ref().unwrap(), 2.0,f);
+        find_wsp_parallel(
+            tree.left_node.as_ref().unwrap(),
+            tree.right_node.as_ref().unwrap(),
+            2.0,
+            f,
+        );
     }
 }
-
-
 
 //--------------------------------------------------------------------------------
 //Checking Node pairs for "Geometrically Separated" condition

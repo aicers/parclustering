@@ -1,18 +1,24 @@
+use crate::bccp::{bcp_helper, Bcp};
 use crate::kdtree::KDTree;
 use crate::node_distance::node_distance;
-use std::sync::atomic::{ Ordering};
-use crate::bccp::{bcp_helper, Bcp};
 use crate::wrapper::Wrapper;
 use crate::wspd::{self, computeWspdParallel};
-use std::cmp::max;
 use rayon::prelude::ParallelIterator;
-use rayon::{self,iter::IntoParallelIterator};
+use rayon::{self, iter::IntoParallelIterator};
+use std::cmp::max;
+use std::sync::atomic::Ordering;
 
-pub trait WspdFilter{
-    fn start(&self,tree: &KDTree) ->bool{true}
-    fn run(&self,left: &KDTree,right: &KDTree){}
-    fn move_on(&self,left: &KDTree,right: &KDTree)->bool{true}
-    fn well_separated(&self,left: &KDTree,right: &KDTree)->bool{true}
+pub trait WspdFilter {
+    fn start(&self, tree: &KDTree) -> bool {
+        true
+    }
+    fn run(&self, left: &KDTree, right: &KDTree) {}
+    fn move_on(&self, left: &KDTree, right: &KDTree) -> bool {
+        true
+    }
+    fn well_separated(&self, left: &KDTree, right: &KDTree) -> bool {
+        true
+    }
 }
 
 pub fn well_separated(left: &KDTree, right: &KDTree, s: f64) -> bool {
@@ -85,17 +91,17 @@ impl<'a> WspdFilter for RhoUpdateParallel<'a> {
         true
     }
 
-    fn well_separated(&self,left: &KDTree, right: &KDTree) -> bool {
+    fn well_separated(&self, left: &KDTree, right: &KDTree) -> bool {
         return unreachable(left, right);
     }
 
     fn start(&self, left: &KDTree) -> bool {
-        if left.size() > *self.beta as usize{
+        if left.size() > *self.beta as usize {
             return true;
-        }else {
+        } else {
             return false;
         }
-    } 
+    }
 }
 
 impl<'a> RhoUpdateParallel<'a> {
@@ -114,10 +120,10 @@ impl<'a> RhoUpdateParallel<'a> {
 
 #[derive(Debug)]
 pub struct WspdGetParallel<'a> {
-    beta:&'a f64,
-    rho_lo:&'a f64,
-    rho_hi:&'a f64,
-    tree:&'a KDTree,
+    beta: &'a f64,
+    rho_lo: &'a f64,
+    rho_hi: &'a f64,
+    tree: &'a KDTree,
     buffer: &'a Vec<Bcp<'a>>,
 }
 
@@ -130,17 +136,23 @@ impl<'a> WspdFilter for WspdGetParallel<'a> {
         }
     }
 
-    fn run(&self,left: &KDTree,right: &KDTree) {
-        vec![(left,right)].into_par_iter().for_each(|(u,v)| {
+    fn run(&self, left: &KDTree, right: &KDTree) {
+        vec![(left, right)].into_par_iter().for_each(|(u, v)| {
             let bcp = bcp_helper(u, v, r, coreDist, point_set);
-            if left.size() + right.size() <= *self.beta as usize && bcp.dist >= *self.rho_lo && bcp.dist < *self.rho_hi {
-                self.buffer.push(Bcp{u:bcp.u, v:bcp.v,dist:bcp.dist});
+            if left.size() + right.size() <= *self.beta as usize
+                && bcp.dist >= *self.rho_lo
+                && bcp.dist < *self.rho_hi
+            {
+                self.buffer.push(Bcp {
+                    u: bcp.u,
+                    v: bcp.v,
+                    dist: bcp.dist,
+                });
             }
         })
-        
     }
 
-    fn move_on(&self,left: &KDTree, right: &KDTree) -> bool {
+    fn move_on(&self, left: &KDTree, right: &KDTree) -> bool {
         if left.has_id() && left.get_id() == right.get_id() {
             return false;
         }
@@ -159,29 +171,29 @@ impl<'a> WspdFilter for WspdGetParallel<'a> {
         return true;
     }
 
-    fn well_separated(&self,left: &KDTree, right: &KDTree) -> bool {
+    fn well_separated(&self, left: &KDTree, right: &KDTree) -> bool {
         return unreachable(left, right);
     }
 }
 
 impl<'a> WspdGetParallel<'a> {
-    fn get_res(&self) ->Vec<Bcp>{
+    fn get_res(&self) -> Vec<Bcp> {
         self.buffer.to_vec()
     }
 }
 
-
-fn filter_wspd_paraller(
-    beta: &f64,
-    rho_lo: &f64,
-    rho_hi: &mut f64,
-    tree: &KDTree,
-) -> Vec<Bcp> {
+fn filter_wspd_paraller(beta: &f64, rho_lo: &f64, rho_hi: &mut f64, tree: &KDTree) -> Vec<Bcp> {
     let my_rho = RhoUpdateParallel::new(beta, tree);
 
     computeWspdParallel(tree.left_node.as_ref().unwrap(), &2., &my_rho);
     let rho_hi = my_rho.get_rho();
-    let my_splitter = WspdGetParallel{beta,rho_lo,rho_hi,rho_hi,tree};
+    let my_splitter = WspdGetParallel {
+        beta,
+        rho_lo,
+        rho_hi,
+        rho_hi,
+        tree,
+    };
 
     computeWspdParallel(tree, &2.0, &my_splitter);
 

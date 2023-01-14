@@ -2,7 +2,7 @@ use crate::kdtree::KDTree;
 use crate::node_distance::node_distance;
 use crate::point::Point;
 use crate::wrapper::Wrapper;
-#[derive(Debug,Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Bcp<'a> {
     pub u: &'a Point,
     pub v: &'a Point,
@@ -33,7 +33,7 @@ pub fn bcp_helper<'a>(
     r: &mut Bcp,
     coreDist: &Vec<f64>,
     point_set: &Vec<Point>,
-) -> &'a mut Bcp{
+) -> &'a mut Bcp {
     if left.is_leaf() && right.is_leaf() {
         for i in 0..left.points.len() {
             for j in 0..right.points.len() {
