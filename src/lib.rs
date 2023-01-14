@@ -1,1 +1,12 @@
 mod bccp;
+mod hdbscan;
+mod kdtree;
+//mod memoGFK;
+mod node_cd;
+mod node_distance;
+mod point;
+mod quickselect;
+mod union_find;
+mod wrapper;
+mod wspd;
+mod wspdparallel;

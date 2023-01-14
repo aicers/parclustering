@@ -1,0 +1,82 @@
+<svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+<g transform="translate(72, 364)">
+<g>
+<g>
+<rect fill="red" height="10" width="10" x="-5" y="-152.08436889678066"/>
+</g>
+</g>
+<g>
+<g>
+<rect fill="blue" height="10" width="10" x="122.94880793953995" y="-5"/>
+<rect fill="blue" height="10" width="10" x="256.4420177695128" y="-104.11336389720586"/>
+<rect fill="blue" height="10" width="10" x="89.76814444507721" y="-345"/>
+</g>
+</g>
+<g>
+<g>
+<rect fill="black" height="10" width="10" x="472.16966433046906" y="-10.746649370187288"/>
+<rect fill="black" height="10" width="10" x="475.00000000000006" y="-147.0509784045846"/>
+</g>
+</g>
+<g>
+<g>
+<line stroke="black" stroke-width="1" x1="0" x2="0" y1="0" y2="10"/>
+<line stroke="black" stroke-width="1" x1="101.83734010594861" x2="101.83734010594861" y1="0" y2="10"/>
+<line stroke="black" stroke-width="1" x1="203.67468021189723" x2="203.67468021189723" y1="0" y2="10"/>
+<line stroke="black" stroke-width="1" x1="305.51202031784584" x2="305.51202031784584" y1="0" y2="10"/>
+<line stroke="black" stroke-width="1" x1="407.34936042379445" x2="407.34936042379445" y1="0" y2="10"/>
+</g>
+<line stroke="black" stroke-width="1" x1="0" x2="480" y1="0" y2="0"/>
+<g>
+<text font-size="12" text-anchor="middle" x="0" y="20">
+10
+</text>
+<text font-size="12" text-anchor="middle" x="101.83734010594861" y="20">
+14
+</text>
+<text font-size="12" text-anchor="middle" x="203.67468021189723" y="20">
+18
+</text>
+<text font-size="12" text-anchor="middle" x="305.51202031784584" y="20">
+22
+</text>
+<text font-size="12" text-anchor="middle" x="407.34936042379445" y="20">
+26
+</text>
+</g>
+<text font-size="12" text-anchor="middle" x="240" y="30">
+
+</text>
+</g>
+<g>
+<g>
+<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="0.00005011872671098602" y2="0.00005011872671098602"/>
+<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="-74.47363905638468" y2="-74.47363905638468"/>
+<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="-148.94732823149604" y2="-148.94732823149604"/>
+<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="-223.42101740660743" y2="-223.42101740660743"/>
+<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="-297.8947065817189" y2="-297.8947065817189"/>
+</g>
+<line stroke="black" stroke-width="1" x1="0" x2="0" y1="0" y2="-340"/>
+<g>
+<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="0.00005011872671098602">
+0.10006
+</text>
+<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="-74.47363905638468">
+4.10006
+</text>
+<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="-148.94732823149604">
+8.10006
+</text>
+<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="-223.42101740660743">
+12.10006
+</text>
+<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="-297.8947065817189">
+16.10006
+</text>
+</g>
+<text font-size="12" text-anchor="middle" transform="rotate(-90 -96 -170)" x="-96" y="-182">
+
+</text>
+</g>
+</g>
+</svg>

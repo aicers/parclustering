@@ -1,85 +1,149 @@
-/* Fast Parallel Algorithm: Computation of Bichromatic Closest Pair Problem Source Code
-Implemented:
-1. Computing BCCP(original version) using Euclidean distance metric for n-dimensional points
-
-2.Pending Implementation:
-A. Need to resolve reference issue on assignning values to euclidean_distance function
-now it is working with .copy() only, otherwise panicing.
-B. Adding the cases when one of the sets might be empty.
-C. Calculation of BCCP using core distances*/
-
-#[derive(Debug, Clone, Copy)]
-pub struct Bccp<T> {
-    left_node: Option<T>,
-    right_node: Option<T>,
+use crate::kdtree::KDTree;
+use crate::node_distance::node_distance;
+use crate::point::Point;
+use crate::wrapper::Wrapper;
+#[derive(Debug,Clone, Copy)]
+pub struct Bcp<'a> {
+    pub u: &'a Point,
+    pub v: &'a Point,
+    pub dist: f64,
 }
 
-impl<T> Bccp<T>
-where
-    T: Iterator<Item = Vec<f64>> + Copy + PartialEq,
-{
-    #[must_use]
-    pub fn new(left_node: Option<T>, right_node: Option<T>) -> Self {
+impl<'a> Bcp<'a> {
+    pub fn new() -> Self {
         Self {
-            left_node,
-            right_node,
+            u: &Point { coords: vec![0.] },
+            v: &Point { coords: vec![0.] },
+            dist: std::f64::MAX,
         }
     }
 
-    pub fn calculate_distance(&self) -> ((Vec<f64>, Vec<f64>), f64) {
-        let (mut closest_pairs, mut pair_distance) = ((Vec::new(), Vec::new()), 0.);
-        // temp_var was added just to make sure that we are in index 0
-        let mut temp_var: bool = true;
+    pub fn update(&mut self, u: &'a Point, v: &'a Point, dist: f64) {
+        if dist < self.dist {
+            self.u = u;
+            self.v = v;
+            self.dist = dist;
+        }
+    }
+}
 
-        if Some(self.left_node) != None && Some(self.right_node) != None {
-            for left_point in self.left_node.unwrap() {
-                for right_point in self.right_node.unwrap() {
-                    let euclidean_dist = euclidean_distance(&left_point, &right_point);
-                    if temp_var {
-                        pair_distance = euclidean_dist;
-                        (closest_pairs.0, closest_pairs.1) =
-                            (left_point.clone(), right_point.clone());
-                        temp_var = false;
-                    } else if euclidean_dist < pair_distance {
-                        pair_distance = euclidean_dist;
-                        (closest_pairs.0, closest_pairs.1) =
-                            (left_point.clone(), right_point.clone());
-                    }
+pub fn bcp_helper<'a>(
+    left: &KDTree,
+    right: &KDTree,
+    r: &mut Bcp,
+    coreDist: &Vec<f64>,
+    point_set: &Vec<Point>,
+) -> &'a mut Bcp{
+    if left.is_leaf() && right.is_leaf() {
+        for i in 0..left.points.len() {
+            for j in 0..right.points.len() {
+                let mut dist = f64::max(
+                    (left.points[i]).distance(&right.points[j]),
+                    coreDist[point_set.iter().position(|x| x == &left.points[i]).unwrap()],
+                );
+                dist = f64::max(
+                    dist,
+                    coreDist[point_set
+                        .iter()
+                        .position(|x| x == &right.points[j])
+                        .unwrap()],
+                );
+                r.update(&left.points[i], &right.points[j], dist);
+            }
+        }
+    } else {
+        if left.is_leaf() {
+            if node_distance(left, &right.left_node.as_ref().unwrap())
+                < node_distance(left, &right.right_node.as_ref().unwrap())
+            {
+                bcp_helper(
+                    left,
+                    &right.left_node.as_ref().unwrap(),
+                    r,
+                    coreDist,
+                    point_set,
+                );
+                bcp_helper(
+                    left,
+                    &right.right_node.as_ref().unwrap(),
+                    r,
+                    coreDist,
+                    point_set,
+                );
+            }
+        } else if right.is_leaf() {
+            if node_distance(right, &left.left_node.as_ref().unwrap())
+                < node_distance(right, &left.right_node.as_ref().unwrap())
+            {
+                bcp_helper(
+                    right,
+                    &left.left_node.as_ref().unwrap(),
+                    r,
+                    coreDist,
+                    point_set,
+                );
+                bcp_helper(
+                    right,
+                    &left.right_node.as_ref().unwrap(),
+                    r,
+                    coreDist,
+                    point_set,
+                );
+            } else {
+                let mut ordering: [(&KDTree, &KDTree); 4] = [
+                    (
+                        &left.right_node.as_ref().unwrap(),
+                        &right.left_node.as_ref().unwrap(),
+                    ),
+                    (
+                        &left.left_node.as_ref().unwrap(),
+                        &right.left_node.as_ref().unwrap(),
+                    ),
+                    (
+                        &left.left_node.as_ref().unwrap(),
+                        &right.right_node.as_ref().unwrap(),
+                    ),
+                    (
+                        &left.right_node.as_ref().unwrap(),
+                        &right.right_node.as_ref().unwrap(),
+                    ),
+                ];
+                ordering.sort_by(|a, b| {
+                    let distance_a = node_distance(a.0, a.1);
+                    let distance_b = node_distance(b.0, b.1);
+                    Wrapper(distance_a).cmp(&Wrapper(distance_b))
+                });
+                for i in 0..ordering.len() {
+                    bcp_helper(ordering[i].0, ordering[i].1, r, coreDist, point_set);
                 }
             }
-        } else if Some(self.left_node) != None {
-        } else if Some(self.right_node) != None {
-        } else {
-            panic!("Both sets are empty")
         }
-        (closest_pairs, pair_distance)
     }
+    r
 }
 
-fn euclidean_distance(left_point: &[f64], right_point: &[f64]) -> f64 {
-    left_point
-        .iter()
-        .zip(right_point.iter())
-        .fold(0., |mut sum, (&x1, &x2)| {
-            let diff = x1 - x2;
-            sum += diff * diff;
-            sum
-        })
-        .sqrt()
-}
-#[cfg(test)]
-mod tests {
-    use crate::Bccp;
-    #[test]
-    fn calculation_check() {
-        let test_data1: Option<_> = Some([[1., 4., 3., 4.], [1., 4., 3., 4.], [1., 4., 3., 4.]]);
-
-        let test_data2: Option<_> = Some([[5., 7., 3., 1.], [1., 4., 3., 4.], [1., 4., 3., 4.]]);
-
-        let minimum_distance = Bccp {
-            left_node: test_data1.as_ref(),
-            right_node: test_data2.as_ref(),
-        };
-        println!("{:?}", minimum_distance);
+pub fn brute_force_bcp<'a>(
+    left: &'a KDTree,
+    right: &'a KDTree,
+    coreDist: &Vec<f64>,
+    point_set: &Vec<Point>,
+) -> Bcp<'a> {
+    let mut r = Bcp::new();
+    for i in 0..left.points.len() {
+        for j in 0..right.points.len() {
+            let mut dist = f64::max(
+                (left.points[i]).distance(&right.points[j]),
+                coreDist[point_set.iter().position(|x| x == &left.points[i]).unwrap()],
+            );
+            dist = f64::max(
+                dist,
+                coreDist[point_set
+                    .iter()
+                    .position(|x| x == &right.points[j])
+                    .unwrap()],
+            );
+            r.update(&left.points[i], &right.points[j], dist);
+        }
     }
+    r
 }
