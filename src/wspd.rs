@@ -112,7 +112,7 @@ pub fn wspd_serial(tree: &KDTree, s: f64) -> Vec<Wsp> {
 //Computing Well Separated Pairs Parallel
 //--------------------------------------------------------------------------------
 struct WspdNormalParallel<'a> {
-    out: &'a mut Arc<Mutex<Vec<Wsp<'a>>>>,
+    out: &'a mut Vec<Wsp<'a>>,
 }
 
 impl<'a> WspdFilter for WspdNormalParallel<'a> {
@@ -121,9 +121,9 @@ impl<'a> WspdFilter for WspdNormalParallel<'a> {
     }
 
     fn run(&self, left: &KDTree, right: &KDTree) {
-        let worker_id = rayon::current_thread_index().unwrap();
-        let mut worker_out = self.out[worker_id].lock().unwrap();
-        worker_out.push(Wsp { u: left, v: right });
+        vec![(left, right)].into_par_iter().for_each(|(u, v)| {
+            self.out.push(Wsp { u: left, v: right })
+        })
     }
 
     fn move_on(&self, left: &KDTree, right: &KDTree) -> bool {
@@ -137,19 +137,12 @@ impl<'a> WspdFilter for WspdNormalParallel<'a> {
 
 impl<'a> WspdNormalParallel<'a> {
     fn new(&self, n: usize) -> Self {
-        //let procs = rayon::current_num_threads();
-        //let out = (0..procs).into_par_iter().map(|_| Arc::new(Mutex::new(Vec::with_capacity(n))));
-        let out = Arc::new(Mutex::new(Vec::with_capacity(n)));
+        let mut out:Vec<Wsp> = Vec::with_capacity(n);
         Self { out: &mut out }
     }
 
-    fn collect_pairs(&self) -> Vec<Wsp> {
-        let mut pairs = Vec::new();
-        for worker_out in self.out {
-            let worker_pairs = worker_out.lock().unwrap();
-            pairs.append(worker_pairs)
-        }
-        pairs
+    fn get_res(&self) -> &mut Vec<Wsp<'a>> {
+        self.out
     }
 }
 
@@ -161,7 +154,7 @@ where
         find_wsp_serial(left, right, 2., f);
     } else {
         if well_separated(left, right, 2.0) {
-            //bucket.push(Wsp { u: left, v: right });
+            f.run(left, right);
         } else {
             if left.is_leaf() && right.is_leaf() {
                 panic!("Leaves not well separated")
