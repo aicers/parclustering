@@ -28,11 +28,11 @@ impl<'a> Bcp<'a> {
 }
 
 pub fn bcp_helper<'a>(
-    left: &KDTree,
-    right: &KDTree,
-    r: &mut Bcp,
-    coreDist: &Vec<f64>,
-    point_set: &Vec<Point>,
+    left: &'a KDTree,
+    right: &'a KDTree,
+    r: &'a mut Bcp,
+    coreDist: &'a Vec<f64>,
+    point_set: &'a Vec<Point>,
 ) -> &'a mut Bcp<'a> {
     if left.is_leaf() && right.is_leaf() {
         for i in 0..left.points.len() {
@@ -125,8 +125,8 @@ pub fn bcp_helper<'a>(
 pub fn brute_force_bcp<'a>(
     left: &'a KDTree,
     right: &'a KDTree,
-    coreDist: &Vec<f64>,
-    point_set: &Vec<Point>,
+    coreDist: &'a Vec<f64>,
+    point_set: &'a Vec<Point>,
 ) -> Bcp<'a> {
     let mut r = Bcp::new();
     for i in 0..left.points.len() {
