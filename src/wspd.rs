@@ -8,7 +8,7 @@ use std::cmp::max;
 use std::sync::{Arc, Mutex};
 
 //Declaring the Well Separated Struct
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Wsp<'a> {
     pub u: &'a KDTree,
     pub v: &'a KDTree,
@@ -33,7 +33,7 @@ impl<'a> Wsp<'a> {
 //Computing Well Separated Pairs Sequentially
 //--------------------------------------------------------------------------------
 struct WspdNormalSerial<'a> {
-    out: &'a mut Vec<Wsp<'a>>,
+    out: Vec<Wsp<'a>>,
 }
 impl<'a> WspdFilter for WspdNormalSerial<'a> {
     fn start(&mut self, tree: &KDTree) -> bool {
@@ -52,12 +52,16 @@ impl<'a> WspdFilter for WspdNormalSerial<'a> {
 }
 
 impl<'a> WspdNormalSerial<'a> {
-    fn new(out: &'a mut Vec<Wsp<'a>>) -> Self {
+    fn new(out: Vec<Wsp<'a>>) -> Self {
         Self { out }
+    }
+
+    fn get_res(&mut self) -> Vec<Wsp<'a>> {
+        self.out.to_vec()
     }
 }
 
-fn find_wsp_serial<'a, T>(left: &'a KDTree, right: &'a KDTree, s: f64, f: &'a mut T)
+fn find_wsp_serial<'a, T>(left: &'a KDTree, right: &'a KDTree, _s: f64, f: &'a mut T)
 where
     T: WspdFilter,
 {
@@ -104,17 +108,18 @@ where
     }
 }
 
-pub fn wspd_serial(tree: &KDTree, s: f64) -> Vec<Wsp> {
-    let mut out = Vec::new();
-    let mut wg = WspdNormalSerial::new(&mut out);
+pub fn wspd_serial(tree: &KDTree, _s: f64) -> Vec<Wsp> {
+    let out = Vec::new();
+    let mut wg = WspdNormalSerial::new(out);
     computeWspdSerial(tree, &2., &mut wg);
-    out
+    return wg.get_res();
 }
 //--------------------------------------------------------------------------------
 //Computing Well Separated Pairs Parallel
 //--------------------------------------------------------------------------------
+#[derive(Debug, Clone)]
 struct WspdNormalParallel<'a> {
-    out: &'a mut Vec<Wsp<'a>>,
+    out: Vec<Wsp<'a>>,
 }
 
 impl<'a> WspdFilter for WspdNormalParallel<'a> {
@@ -125,7 +130,7 @@ impl<'a> WspdFilter for WspdNormalParallel<'a> {
     fn run(&mut self, left: &KDTree, right: &KDTree) {
         vec![(left, right)]
             .into_par_iter()
-            .for_each(|(u, v)| self.out.push(Wsp { u: left, v: right }))
+            .for_each(|(u, v)| self.out.push(Wsp::add(left, right)))
     }
 
     fn move_on(&mut self, left: &KDTree, right: &KDTree) -> bool {
@@ -138,13 +143,12 @@ impl<'a> WspdFilter for WspdNormalParallel<'a> {
 }
 
 impl<'a> WspdNormalParallel<'a> {
-    fn new(&self, n: usize) -> Self {
-        let mut out: Vec<Wsp> = Vec::with_capacity(n);
-        Self { out: &mut out }
+    fn new(out: Vec<Wsp<'a>>) -> Self {
+        Self { out }
     }
 
-    fn get_res(&self) -> &mut Vec<Wsp<'a>> {
-        self.out
+    fn get_res(&self) -> Vec<Wsp<'a>> {
+        self.out.to_vec()
     }
 }
 
@@ -189,7 +193,7 @@ where
 
 pub fn computeWspdParallel<'a, T>(tree: &'a KDTree, s: &'a f64, f: &'a mut T)
 where
-    T: WspdFilter + std::marker::Sync + std::marker::Send,
+    T: WspdFilter + std::marker::Sync + std::marker::Send + Clone,
 {
     if tree.size() < 2000 {
         computeWspdSerial(tree, s, f);
@@ -208,6 +212,11 @@ where
     }
 }
 
+pub fn wspd_parallel(tree: &KDTree, _s: f64) -> Vec<Wsp> {
+    let mut wg = WspdNormalParallel::new(Vec::with_capacity(tree.size()));
+    computeWspdParallel(tree, &_s, &mut wg);
+    wg.get_res()
+}
 //--------------------------------------------------------------------------------
 //Checking Node pairs for "Geometrically Separated" condition
 //--------------------------------------------------------------------------------

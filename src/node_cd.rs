@@ -90,9 +90,9 @@ mod tests {
                 .collect(),
         };
         let mut random_points: Vec<Point> = (0..n_random).map(|_| make_random_point()).collect();
-        let search_point = random_points[0].clone();
+        let _search_point = random_points[0].clone();
 
-        let kdtree = KDTree::build(&mut random_points);
+        let _kdtree = KDTree::build(&mut random_points);
         //let closest_pts = kdtree.nearest_neighbours(&search_point, 4);
     }
 }

@@ -2,23 +2,23 @@ use crate::kdtree::KDTree;
 use crate::node_distance::node_distance;
 use crate::point::Point;
 use crate::wrapper::Wrapper;
-#[derive(Debug, Clone, Copy)]
-pub struct Bcp<'a> {
-    pub u: &'a Point,
-    pub v: &'a Point,
+#[derive(Debug, Clone)]
+pub struct Bcp {
+    pub u: Point,
+    pub v: Point,
     pub dist: f64,
 }
 
-impl<'a> Bcp<'a> {
+impl Bcp {
     pub fn new() -> Self {
         Self {
-            u: &Point { coords: vec![0.] },
-            v: &Point { coords: vec![0.] },
+            u: Point { coords: vec![0.] },
+            v: Point { coords: vec![0.] },
             dist: std::f64::MAX,
         }
     }
 
-    pub fn update(&mut self, u: &'a Point, v: &'a Point, dist: f64) {
+    pub fn update(&mut self, u: Point, v: Point, dist: f64) {
         if dist < self.dist {
             self.u = u;
             self.v = v;
@@ -33,7 +33,7 @@ pub fn bcp_helper<'a>(
     r: &'a mut Bcp,
     coreDist: &'a Vec<f64>,
     point_set: &'a Vec<Point>,
-) -> &'a mut Bcp<'a> {
+) -> &mut Bcp {
     if left.is_leaf() && right.is_leaf() {
         for i in 0..left.points.len() {
             for j in 0..right.points.len() {
@@ -48,7 +48,7 @@ pub fn bcp_helper<'a>(
                         .position(|x| x == &right.points[j])
                         .unwrap()],
                 );
-                r.update(&left.points[i], &right.points[j], dist);
+                r.update(left.points[i].clone(), right.points[j].clone(), dist);
             }
         }
     } else {
@@ -127,7 +127,7 @@ pub fn brute_force_bcp<'a>(
     right: &'a KDTree,
     coreDist: &'a Vec<f64>,
     point_set: &'a Vec<Point>,
-) -> Bcp<'a> {
+) -> Bcp {
     let mut r = Bcp::new();
     for i in 0..left.points.len() {
         for j in 0..right.points.len() {
@@ -142,7 +142,7 @@ pub fn brute_force_bcp<'a>(
                     .position(|x| x == &right.points[j])
                     .unwrap()],
             );
-            r.update(&left.points[i], &right.points[j], dist);
+            r.update(left.points[i].clone(), right.points[j].clone(), dist);
         }
     }
     r

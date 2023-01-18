@@ -61,7 +61,7 @@ pub fn unreachable(left: &KDTree, right: &KDTree) -> bool {
         false || geom_separated
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RhoUpdateParallel<'a> {
     tree: &'a KDTree,
     beta: &'a f64,
@@ -72,7 +72,8 @@ impl<'a> WspdFilter for RhoUpdateParallel<'a> {
     fn run(&mut self, left: &KDTree, right: &KDTree) {
         let mut my_dist = f64::max(node_distance(&left, &right), left.cd_min);
         my_dist = f64::max(my_dist, right.cd_min);
-        self.rho = Arc::from(Mutex::from(f64::min(*self.rho.lock().unwrap(), my_dist)));
+        let temp = Arc::from(Mutex::from(f64::min(*self.rho.lock().unwrap(), my_dist)));
+        self.rho = temp;
     }
 
     fn move_on(&mut self, left: &KDTree, right: &KDTree) -> bool {
@@ -120,19 +121,19 @@ impl<'a> RhoUpdateParallel<'a> {
     }
 }
 
-#[derive(Debug)]
-pub struct WspdGetParallel<'a> {
+#[derive(Debug, Clone)]
+pub struct WspdGetParallel<'a, 'b: 'a> {
     beta: &'a f64,
     rho_lo: &'a f64,
-    rho_hi: &'a f64,
-    tree: &'a KDTree,
-    buffer: &'a mut Vec<Bcp<'a>>,
+    rho_hi: f64,
+    tree: &'b KDTree,
+    buffer: Vec<Bcp>,
     core_dist: &'a Vec<f64>,
     point_set: &'a Vec<Point>,
-    r: &'a mut Bcp<'a>,
+    r: Bcp,
 }
 
-impl<'a> WspdFilter for WspdGetParallel<'a> {
+impl<'a, 'b> WspdFilter for WspdGetParallel<'a, 'b> {
     fn start(&mut self, tree: &KDTree) -> bool {
         if f64::max(tree.diag(), tree.cd_max) >= *self.rho_lo {
             return true;
@@ -143,10 +144,10 @@ impl<'a> WspdFilter for WspdGetParallel<'a> {
 
     fn run(&mut self, left: &KDTree, right: &KDTree) {
         vec![(left, right)].into_par_iter().for_each(|(u, v)| {
-            let bcp = bcp_helper(u, v,self.r, self.core_dist, self.point_set);
+            let bcp = bcp_helper(&u, &v, &mut self.r, self.core_dist, self.point_set);
             if left.size() + right.size() <= *self.beta as usize
                 && bcp.dist >= *self.rho_lo
-                && bcp.dist < *self.rho_hi
+                && bcp.dist < self.rho_hi
             {
                 self.buffer.push(Bcp {
                     u: bcp.u,
@@ -164,7 +165,7 @@ impl<'a> WspdFilter for WspdGetParallel<'a> {
         let mut dist = f64::max(node_distance(left, right), left.cd_min);
         dist = f64::max(dist, right.cd_min);
 
-        if dist >= *self.rho_hi {
+        if dist >= self.rho_hi {
             return false;
         }
         dist = f64::max(node_distance(left, right), left.cd_max);
@@ -181,57 +182,52 @@ impl<'a> WspdFilter for WspdGetParallel<'a> {
     }
 }
 
-impl<'a> WspdGetParallel<'a> {
+impl<'a: 'b, 'b> WspdGetParallel<'a, 'b> {
     fn new(
         beta: &'a f64,
         rho_lo: &'a f64,
-        rho_hi: &'a mut f64,
+        rho_hi: f64,
         tree: &'a KDTree,
-        buffer: &'a mut Vec<Bcp<'a>>,
+        buffer: Vec<Bcp>,
         core_dist: &'a Vec<f64>,
         point_set: &'a Vec<Point>,
-        r: &'a mut Bcp<'a>,
+        r: Bcp,
     ) -> Self {
         Self {
             beta,
             rho_lo,
             rho_hi,
             tree,
-            buffer,
+            buffer: buffer.to_vec(),
             core_dist,
             point_set,
             r,
         }
     }
+    fn get_res(&self) -> Vec<Bcp> {
+        self.buffer.to_vec()
+    }
 }
 
-fn filter_wspd_paraller<'a>(
-    beta: &'a f64,
-    rho_lo: &'a f64,
-    _rho_hi: &'a mut f64,
+fn filter_wspd_paraller<'a, 'b: 'a, 'c: 'a>(
+    beta: &'b f64,
+    rho_lo: &'b f64,
+    _rho_hi: f64,
     tree: &'a KDTree,
-    core_dist: &'a Vec<f64>,
-    point_set: &'a Vec<Point>,
-) -> Vec<Bcp<'a>> {
+    core_dist: &'c Vec<f64>,
+    point_set: &'c Vec<Point>,
+) -> Vec<Bcp> {
     let mut my_rho = RhoUpdateParallel::new(beta, tree);
 
     computeWspdParallel(tree.left_node.as_ref().unwrap(), &2., &mut my_rho);
-    let mut rho_hi = my_rho.get_rho();
-    let mut buffer: Vec<Bcp> = Vec::new();
-    let mut r = Bcp::new();
-    let mut my_splitter = WspdGetParallel::new(
-        beta,
-        rho_lo,
-        &mut rho_hi,
-        tree,
-        &mut buffer,
-        core_dist,
-        point_set,
-        &mut r,
-    );
+    let rho_hi = my_rho.get_rho();
+    let buffer: Vec<Bcp> = Vec::new();
+    let r = Bcp::new();
+    let mut my_splitter =
+        WspdGetParallel::new(beta, rho_lo, rho_hi, tree, buffer, core_dist, point_set, r);
 
     computeWspdParallel(tree, &2.0, &mut my_splitter);
 
-    let t_rho_hi = &my_rho.get_rho();
-    return buffer;
+    let _t_rho_hi = &my_rho.get_rho();
+    return my_splitter.get_res();
 }
