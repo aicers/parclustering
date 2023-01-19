@@ -9,22 +9,20 @@ use std::sync::{Arc, Mutex};
 
 //Declaring the Well Separated Struct
 #[derive(Debug, Clone)]
-pub struct Wsp<'a> {
-    pub u: &'a KDTree,
-    pub v: &'a KDTree,
+pub struct Wsp {
+    pub u: KDTree,
+    pub v: KDTree,
 }
 
-impl<'a> Wsp<'a> {
+impl Wsp {
     pub fn new() -> Self {
-        let left = KDTree::empty();
-        let right = KDTree::empty();
         Self {
-            u: &left,
-            v: &right,
+            u: KDTree::empty(),
+            v: KDTree::empty(),
         }
     }
 
-    pub fn add(left: &'a KDTree, right: &'a KDTree) -> Self {
+    pub fn add(left: KDTree, right: KDTree) -> Self {
         Self { u: left, v: right }
     }
 }
@@ -32,15 +30,15 @@ impl<'a> Wsp<'a> {
 //--------------------------------------------------------------------------------
 //Computing Well Separated Pairs Sequentially
 //--------------------------------------------------------------------------------
-struct WspdNormalSerial<'a> {
-    out: Vec<Wsp<'a>>,
+struct WspdNormalSerial {
+    out: Vec<Wsp>,
 }
-impl<'a> WspdFilter for WspdNormalSerial<'a> {
+impl WspdFilter for WspdNormalSerial {
     fn start(&mut self, tree: &KDTree) -> bool {
         true
     }
     fn run(&mut self, left: &KDTree, right: &KDTree) {
-        self.out.push(Wsp::add(left, right));
+        self.out.push(Wsp::add(left.clone(), right.clone()));
     }
     fn move_on(&mut self, left: &KDTree, right: &KDTree) -> bool {
         true
@@ -51,12 +49,12 @@ impl<'a> WspdFilter for WspdNormalSerial<'a> {
     }
 }
 
-impl<'a> WspdNormalSerial<'a> {
-    fn new(out: Vec<Wsp<'a>>) -> Self {
+impl WspdNormalSerial {
+    fn new(out: Vec<Wsp>) -> Self {
         Self { out }
     }
 
-    fn get_res(&mut self) -> Vec<Wsp<'a>> {
+    fn get_res(&mut self) -> Vec<Wsp> {
         self.out.to_vec()
     }
 }
@@ -118,19 +116,17 @@ pub fn wspd_serial(tree: &KDTree, _s: f64) -> Vec<Wsp> {
 //Computing Well Separated Pairs Parallel
 //--------------------------------------------------------------------------------
 #[derive(Debug, Clone)]
-struct WspdNormalParallel<'a> {
-    out: Vec<Wsp<'a>>,
+struct WspdNormalParallel {
+    out: Vec<Wsp>,
 }
 
-impl<'a> WspdFilter for WspdNormalParallel<'a> {
+impl WspdFilter for WspdNormalParallel {
     fn start(&mut self, tree: &KDTree) -> bool {
         true
     }
 
     fn run(&mut self, left: &KDTree, right: &KDTree) {
-        vec![(left, right)]
-            .into_par_iter()
-            .for_each(|(u, v)| self.out.push(Wsp::add(left, right)))
+        self.out.push(Wsp::add(left.clone(), right.clone()))
     }
 
     fn move_on(&mut self, left: &KDTree, right: &KDTree) -> bool {
@@ -142,12 +138,12 @@ impl<'a> WspdFilter for WspdNormalParallel<'a> {
     }
 }
 
-impl<'a> WspdNormalParallel<'a> {
-    fn new(out: Vec<Wsp<'a>>) -> Self {
+impl WspdNormalParallel {
+    fn new(out: Vec<Wsp>) -> Self {
         Self { out }
     }
 
-    fn get_res(&self) -> Vec<Wsp<'a>> {
+    fn get_res(&self) -> Vec<Wsp> {
         self.out.to_vec()
     }
 }
