@@ -3,7 +3,7 @@ use crate::kdtree::KDTree;
 use crate::node_distance::node_distance;
 use crate::point::Point;
 use crate::wrapper::Wrapper;
-use crate::wspd::{self, computeWspdParallel};
+use crate::wspd::{self, compute_wspd_parallel};
 use rayon::prelude::ParallelIterator;
 use rayon::{self, iter::IntoParallelIterator};
 use std::cmp::max;
@@ -214,16 +214,16 @@ fn filter_wspd_paraller<'a, 'b: 'a, 'c: 'a>(
     core_dist: &'c Vec<f64>,
     point_set: &'c Vec<Point>,
 ) -> Vec<Bcp> {
-    let mut my_rho = RhoUpdateParallel::new(beta, tree);
+    let mut my_rho = Arc::new(Mutex::new(RhoUpdateParallel::new(beta, tree)));
 
-    computeWspdParallel(tree.left_node.as_ref().unwrap(), &2., &mut my_rho);
-    let rho_hi = my_rho.get_rho();
+    compute_wspd_parallel(tree.left_node.as_ref().unwrap(), &2., my_rho.clone());
+    let rho_hi = my_rho.lock().unwrap().get_rho();
     let buffer: Vec<Bcp> = Vec::new();
     let mut my_splitter =
-        WspdGetParallel::new(beta, rho_lo, rho_hi, tree, buffer, core_dist, point_set);
+        Arc::new(Mutex::new(WspdGetParallel::new(beta, rho_lo, rho_hi, tree, buffer, core_dist, point_set)));
 
-    computeWspdParallel(tree, &2.0, &mut my_splitter);
+    compute_wspd_parallel(tree, &2.0, my_splitter.clone());
 
-    let _t_rho_hi = &my_rho.get_rho();
-    return my_splitter.get_res();
+    let _t_rho_hi = &my_rho.lock().unwrap().get_rho();
+    return my_splitter.lock().unwrap().get_res();
 }

@@ -1,11 +1,11 @@
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-
+use std::thread;
+use std::sync::{Arc,Mutex};
 use crate::kdtree::KDTree;
 use crate::point::Point;
 use crate::wrapper::Wrapper;
 use crate::wspdparallel::WspdFilter;
 use std::cmp::max;
-use std::sync::{Arc, Mutex};
 
 //Declaring the Well Separated Struct
 #[derive(Debug, Clone)]
@@ -59,11 +59,11 @@ impl WspdNormalSerial {
     }
 }
 
-fn find_wsp_serial<'a, T>(left: &'a KDTree, right: &'a KDTree, _s: f64, f: &'a mut T)
+fn find_wsp_serial<'a, T>(left: &'a KDTree, right: &'a KDTree, _s: f64, f: Arc<Mutex<T>>)
 where
     T: WspdFilter,
 {
-    if !f.move_on(left, right) {
+    if !f.lock().unwrap().move_on(left, right) {
         return;
     }
 
@@ -72,45 +72,45 @@ where
         if left.is_leaf() && right.is_leaf() {
             panic!("Leaves not well separated")
         } else if left.is_leaf() {
-            find_wsp_serial(&right.left_node.as_ref().unwrap(), left, 2.0, f);
-            find_wsp_serial(&right.right_node.as_ref().unwrap(), left, 2.0, f);
+            find_wsp_serial(&right.left_node.as_ref().unwrap(), left, 2.0, f.clone());
+            find_wsp_serial(&right.right_node.as_ref().unwrap(), left, 2.0, f.clone());
         } else if right.is_leaf() {
-            find_wsp_serial(&left.left_node.as_ref().unwrap(), right, 2.0, f);
-            find_wsp_serial(&left.right_node.as_ref().unwrap(), right, 2.0, f);
+            find_wsp_serial(&left.left_node.as_ref().unwrap(), right, 2.0, f.clone());
+            find_wsp_serial(&left.right_node.as_ref().unwrap(), right, 2.0, f.clone());
         } else {
             if left.lMax() > right.lMax() {
-                find_wsp_serial(&left.left_node.as_ref().unwrap(), right, 2.0, f);
-                find_wsp_serial(&left.right_node.as_ref().unwrap(), right, 2.0, f);
+                find_wsp_serial(&left.left_node.as_ref().unwrap(), right, 2.0, f.clone());
+                find_wsp_serial(&left.right_node.as_ref().unwrap(), right, 2.0, f.clone());
             } else {
-                find_wsp_serial(&right.left_node.as_ref().unwrap(), left, 2.0, f);
-                find_wsp_serial(&right.right_node.as_ref().unwrap(), left, 2.0, f);
+                find_wsp_serial(&right.left_node.as_ref().unwrap(), left, 2.0, f.clone());
+                find_wsp_serial(&right.right_node.as_ref().unwrap(), left, 2.0, f.clone());
             }
         }
     }
 }
 
-fn computeWspdSerial<'a, T>(tree: &'a KDTree, s: &'a f64, f: &'a mut T)
+fn computeWspdSerial<'a, T>(tree: &'a KDTree, s: &'a f64, f: Arc<Mutex<T>>)
 where
     T: WspdFilter,
 {
-    if !tree.is_leaf() && f.start(tree) {
-        computeWspdSerial(tree.left_node.as_ref().unwrap(), s, f);
-        computeWspdSerial(tree.right_node.as_ref().unwrap(), s, f);
+    if !tree.is_leaf() && f.lock().unwrap().start(tree) {
+        computeWspdSerial(tree.left_node.as_ref().unwrap(), s, f.clone());
+        computeWspdSerial(tree.right_node.as_ref().unwrap(), s, f.clone());
 
         find_wsp_serial(
             tree.left_node.as_ref().unwrap(),
             tree.right_node.as_ref().unwrap(),
             2.,
-            f,
+            f.clone(),
         );
     }
 }
 
 pub fn wspd_serial(tree: &KDTree, _s: f64) -> Vec<Wsp> {
     let out = Vec::new();
-    let mut wg = WspdNormalSerial::new(out);
-    computeWspdSerial(tree, &2., &mut wg);
-    return wg.get_res();
+    let mut wg = Arc::new(Mutex::new(WspdNormalSerial::new(out)));
+    computeWspdSerial(tree, &2., wg.clone());
+    return wg.lock().unwrap().get_res();
 }
 //--------------------------------------------------------------------------------
 //Computing Well Separated Pairs Parallel
@@ -148,7 +148,7 @@ impl WspdNormalParallel {
     }
 }
 
-pub fn find_wsp_parallel<'a, T>(left: &'a KDTree, right: &'a KDTree, s: f64, f: &'a mut T)
+pub fn find_wsp_parallel<'a, T>(left: &'a KDTree, right: &'a KDTree, s: f64, f: Arc<Mutex<T>>)
 where
     T: WspdFilter + std::marker::Sync + std::marker::Send,
 {
@@ -156,30 +156,30 @@ where
         find_wsp_serial(left, right, 2., f);
     } else {
         if well_separated(left, right, 2.0) {
-            f.run(left, right);
+            f.lock().unwrap().run(left, right);
         } else {
             if left.is_leaf() && right.is_leaf() {
                 panic!("Leaves not well separated")
             } else if left.is_leaf() {
                 rayon::join(
-                    || find_wsp_parallel(&right.left_node.as_ref().unwrap(), left, 2.0, f),
-                    || find_wsp_parallel(&right.right_node.as_ref().unwrap(), left, 2.0, f),
+                    || find_wsp_parallel(&right.left_node.as_ref().unwrap(), left, 2.0, f.clone()),
+                    || find_wsp_parallel(&right.right_node.as_ref().unwrap(), left, 2.0, f.clone()),
                 );
             } else if right.is_leaf() {
                 rayon::join(
-                    || find_wsp_parallel(&left.left_node.as_ref().unwrap(), right, 2.0, f),
-                    || find_wsp_parallel(&left.right_node.as_ref().unwrap(), right, 2.0, f),
+                    || find_wsp_parallel(&left.left_node.as_ref().unwrap(), right, 2.0, f.clone()),
+                    || find_wsp_parallel(&left.right_node.as_ref().unwrap(), right, 2.0, f.clone()),
                 );
             } else {
                 if left.lMax() > right.lMax() {
                     rayon::join(
-                        || find_wsp_parallel(&left.left_node.as_ref().unwrap(), right, 2.0, f),
-                        || find_wsp_parallel(&left.right_node.as_ref().unwrap(), right, 2.0, f),
+                        || find_wsp_parallel(&left.left_node.as_ref().unwrap(), right, 2.0, f.clone()),
+                        || find_wsp_parallel(&left.right_node.as_ref().unwrap(), right, 2.0, f.clone()),
                     );
                 } else {
                     rayon::join(
-                        || find_wsp_parallel(&right.left_node.as_ref().unwrap(), left, 2.0, f),
-                        || find_wsp_parallel(&right.right_node.as_ref().unwrap(), left, 2.0, f),
+                        || find_wsp_parallel(&right.left_node.as_ref().unwrap(), left, 2.0, f.clone()),
+                        || find_wsp_parallel(&right.right_node.as_ref().unwrap(), left, 2.0, f.clone()),
                     );
                 }
             }
@@ -187,31 +187,36 @@ where
     }
 }
 
-pub fn computeWspdParallel<'a, T>(tree: &'a KDTree, s: &'a f64, f: &'a mut T)
+pub fn compute_wspd_parallel<'a, T>(tree: &'a KDTree, s: &'a f64, f: Arc<Mutex<T>>)
 where
     T: WspdFilter + std::marker::Sync + std::marker::Send + Clone,
 {
     if tree.size() < 2000 {
-        computeWspdSerial(tree, s, f);
+        computeWspdSerial(tree, s, f.clone());
     }
     if !(tree.is_leaf()) && true {
-        rayon::join(
-            || computeWspdParallel(&tree.left_node.as_ref().unwrap(), s, f),
-            || computeWspdParallel(&tree.right_node.as_ref().unwrap(), s, f),
-        );
+        thread::scope(|par| {
+            par.spawn(|| {
+                compute_wspd_parallel(&tree.left_node.as_ref().unwrap(), s, f.clone())
+            });
+            par.spawn(|| {
+                compute_wspd_parallel(&tree.right_node.as_ref().unwrap(), s, f.clone())
+            });
+        });
         find_wsp_parallel(
             tree.left_node.as_ref().unwrap(),
             tree.right_node.as_ref().unwrap(),
             2.0,
-            f,
+            f.clone(),
         );
     }
 }
 
 pub fn wspd_parallel(tree: &KDTree, _s: f64) -> Vec<Wsp> {
-    let mut wg = WspdNormalParallel::new(Vec::with_capacity(tree.size()));
-    computeWspdParallel(tree, &_s, &mut wg);
-    wg.get_res()
+    let mut wg = Arc::new(Mutex::new(WspdNormalParallel::new(Vec::with_capacity(tree.size()))));
+    compute_wspd_parallel(tree, &_s, wg.clone());
+    let res = wg.lock().unwrap().get_res();
+    res
 }
 //--------------------------------------------------------------------------------
 //Checking Node pairs for "Geometrically Separated" condition
