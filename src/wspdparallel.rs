@@ -219,8 +219,9 @@ fn filter_wspd_paraller<'a, 'b: 'a, 'c: 'a>(
     compute_wspd_parallel(tree.left_node.as_ref().unwrap(), &2., my_rho.clone());
     let rho_hi = my_rho.lock().unwrap().get_rho();
     let buffer: Vec<Bcp> = Vec::new();
-    let mut my_splitter =
-        Arc::new(Mutex::new(WspdGetParallel::new(beta, rho_lo, rho_hi, tree, buffer, core_dist, point_set)));
+    let mut my_splitter = Arc::new(Mutex::new(WspdGetParallel::new(
+        beta, rho_lo, rho_hi, tree, buffer, core_dist, point_set,
+    )));
 
     compute_wspd_parallel(tree, &2.0, my_splitter.clone());
 

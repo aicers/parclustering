@@ -8,10 +8,7 @@ pub fn node_cd(
     cd_min: f64,
     cd_max: f64,
 ) {
-    if Some(&node) == None {
-        ();
-    }
-    if Some(&node.left_node) == None && Some(&node.right_node) == None {
+    if node.is_leaf() {
         for elem in &node.points {
             println!("{:?}", elem);
             let target_cd = core_dist[point_set.iter().position(|x| x == elem).unwrap()];
@@ -24,7 +21,7 @@ pub fn node_cd(
             }
         }
     } else {
-        if node.points.len() > 2000 {
+        if node.size() > 2000 {
             rayon::join(
                 || {
                     if let Some(ref mut left_node) = node.left_node {
@@ -45,10 +42,10 @@ pub fn node_cd(
                 node_cd(right_node.as_mut(), point_set, core_dist, cd_min, cd_max);
             }
         };
-    }
 
-    node.cd_max =
-        if let (Some(ref left_node), Some(ref right_node)) = (&node.left_node, &node.right_node) {
+        node.cd_max = if let (Some(ref left_node), Some(ref right_node)) =
+            (&node.left_node, &node.right_node)
+        {
             f64::max(left_node.as_ref().cd_max, right_node.as_ref().cd_max)
         } else {
             if let Some(ref left_node) = node.left_node {
@@ -60,8 +57,9 @@ pub fn node_cd(
             }
         };
 
-    node.cd_min =
-        if let (Some(ref left_node), Some(ref right_node)) = (&node.left_node, &node.right_node) {
+        node.cd_min = if let (Some(ref left_node), Some(ref right_node)) =
+            (&node.left_node, &node.right_node)
+        {
             f64::max(left_node.as_ref().cd_min, right_node.as_ref().cd_min)
         } else {
             if let Some(ref left_node) = node.left_node {
@@ -69,9 +67,10 @@ pub fn node_cd(
             } else if let Some(ref right_node) = node.right_node {
                 f64::min(0.0, right_node.as_ref().cd_min)
             } else {
-                1.
+                5.
             }
         };
+    }
 }
 
 #[allow(unused_imports)]
@@ -79,7 +78,7 @@ mod tests {
     use super::*;
     use rand::thread_rng;
     use rand::Rng;
-
+    #[ignore = "Not complete yet"]
     #[test]
     fn hdbscan() {
         let mut rng = thread_rng();

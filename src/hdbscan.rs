@@ -17,7 +17,7 @@ mod tests {
 
         //Generating random points for our dataset
         let mut make_random_point = || Point {
-            coords: (0..1).map(|_| (rng.gen::<f64>() - 0.5) * 100.0).collect(),
+            coords: (0..2).map(|_| (rng.gen::<f64>() - 0.5) * 100.0).collect(),
         };
         let mut random_points: Vec<Point> = (0..n_random).map(|_| make_random_point()).collect();
 
@@ -39,7 +39,7 @@ mod tests {
         let mut cd_min = f64::MAX;
         let mut cd_max = f64::MIN;
 
-        //println!("{:?}", kdtree);
+        println!("{:?}", kdtree);
         node_cd(&mut kdtree, &random_points, &core_dist, cd_min, cd_max);
         println!("{:#?}", kdtree);
     }

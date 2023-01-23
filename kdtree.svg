@@ -2,42 +2,42 @@
 <g transform="translate(72, 364)">
 <g>
 <g>
-<rect fill="red" height="10" width="10" x="-5" y="-40.37724566864521"/>
+<rect fill="red" height="10" width="10" x="219.26961831291786" y="-84.52857013912119"/>
 </g>
 </g>
 <g>
 <g>
-<rect fill="blue" height="10" width="10" x="254.88664221670098" y="-5"/>
-<rect fill="blue" height="10" width="10" x="283.55203943606426" y="-52.662313326512674"/>
-<rect fill="blue" height="10" width="10" x="475" y="-25.290390143469498"/>
+<rect fill="blue" height="10" width="10" x="326.0826190017577" y="-11.306819502694568"/>
+<rect fill="blue" height="10" width="10" x="405.47112532891566" y="-5"/>
+<rect fill="blue" height="10" width="10" x="475" y="-208.9800397479605"/>
 </g>
 </g>
 <g>
 <g>
-<rect fill="black" height="10" width="10" x="237.65435466793193" y="-345"/>
-<rect fill="black" height="10" width="10" x="312.4867684543456" y="-262.1373692168662"/>
+<rect fill="black" height="10" width="10" x="-5" y="-316.4036888522014"/>
+<rect fill="black" height="10" width="10" x="237.56652157268263" y="-345"/>
 </g>
 </g>
 <g>
 <g>
-<line stroke="black" stroke-width="1" x1="0" x2="0" y1="0" y2="10"/>
-<line stroke="black" stroke-width="1" x1="133.07000162740454" x2="133.07000162740454" y1="0" y2="10"/>
-<line stroke="black" stroke-width="1" x1="266.1400032548091" x2="266.1400032548091" y1="0" y2="10"/>
-<line stroke="black" stroke-width="1" x1="399.2100048822136" x2="399.2100048822136" y1="0" y2="10"/>
+<line stroke="black" stroke-width="1" x1="-0.00013206973558867763" x2="-0.00013206973558867763" y1="0" y2="10"/>
+<line stroke="black" stroke-width="1" x1="153.27062062509992" x2="153.27062062509992" y1="0" y2="10"/>
+<line stroke="black" stroke-width="1" x1="306.54137331993553" x2="306.54137331993553" y1="0" y2="10"/>
+<line stroke="black" stroke-width="1" x1="459.812126014771" x2="459.812126014771" y1="0" y2="10"/>
 </g>
 <line stroke="black" stroke-width="1" x1="0" x2="480" y1="0" y2="0"/>
 <g>
-<text font-size="12" text-anchor="middle" x="0" y="20">
-10
+<text font-size="12" text-anchor="middle" x="-0.00013206973558867763" y="20">
+2.68387
 </text>
-<text font-size="12" text-anchor="middle" x="133.07000162740454" y="20">
-14
+<text font-size="12" text-anchor="middle" x="153.27062062509992" y="20">
+7.68387
 </text>
-<text font-size="12" text-anchor="middle" x="266.1400032548091" y="20">
-18
+<text font-size="12" text-anchor="middle" x="306.54137331993553" y="20">
+12.68387
 </text>
-<text font-size="12" text-anchor="middle" x="399.2100048822136" y="20">
-22
+<text font-size="12" text-anchor="middle" x="459.812126014771" y="20">
+17.68387
 </text>
 </g>
 <text font-size="12" text-anchor="middle" x="240" y="30">
@@ -46,28 +46,32 @@
 </g>
 <g>
 <g>
-<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="0.00006995826723695935" y2="0.00006995826723695935"/>
-<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="-79.4580011100228" y2="-79.4580011100228"/>
-<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="-158.91607217831287" y2="-158.91607217831287"/>
-<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="-238.3741432466029" y2="-238.3741432466029"/>
-<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="-317.8322143148929" y2="-317.8322143148929"/>
+<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="0.000040948448893887314" y2="0.000040948448893887314"/>
+<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="-56.71152304130397" y2="-56.71152304130397"/>
+<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="-113.42308703105684" y2="-113.42308703105684"/>
+<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="-170.13465102080968" y2="-170.13465102080968"/>
+<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="-226.8462150105626" y2="-226.8462150105626"/>
+<line stroke="black" stroke-width="1" x1="0" x2="-10" y1="-283.55777900031546" y2="-283.55777900031546"/>
 </g>
 <line stroke="black" stroke-width="1" x1="0" x2="0" y1="0" y2="-340"/>
 <g>
-<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="0.00006995826723695935">
-6.21907
+<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="0.000040948448893887314">
+2.39066
 </text>
-<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="-79.4580011100228">
-10.21907
+<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="-56.71152304130397">
+6.39066
 </text>
-<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="-158.91607217831287">
-14.21907
+<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="-113.42308703105684">
+10.39066
 </text>
-<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="-238.3741432466029">
-18.21907
+<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="-170.13465102080968">
+14.39066
 </text>
-<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="-317.8322143148929">
-22.21907
+<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="-226.8462150105626">
+18.39066
+</text>
+<text dominant-baseline="middle" font-size="12" text-anchor="end" x="-15" y="-283.55777900031546">
+22.39066
 </text>
 </g>
 <text font-size="12" text-anchor="middle" transform="rotate(-90 -96 -170)" x="-96" y="-182">

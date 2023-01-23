@@ -1,11 +1,11 @@
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use std::thread;
-use std::sync::{Arc,Mutex};
 use crate::kdtree::KDTree;
 use crate::point::Point;
 use crate::wrapper::Wrapper;
 use crate::wspdparallel::WspdFilter;
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::cmp::max;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 //Declaring the Well Separated Struct
 #[derive(Debug, Clone)]
@@ -173,13 +173,41 @@ where
             } else {
                 if left.lMax() > right.lMax() {
                     rayon::join(
-                        || find_wsp_parallel(&left.left_node.as_ref().unwrap(), right, 2.0, f.clone()),
-                        || find_wsp_parallel(&left.right_node.as_ref().unwrap(), right, 2.0, f.clone()),
+                        || {
+                            find_wsp_parallel(
+                                &left.left_node.as_ref().unwrap(),
+                                right,
+                                2.0,
+                                f.clone(),
+                            )
+                        },
+                        || {
+                            find_wsp_parallel(
+                                &left.right_node.as_ref().unwrap(),
+                                right,
+                                2.0,
+                                f.clone(),
+                            )
+                        },
                     );
                 } else {
                     rayon::join(
-                        || find_wsp_parallel(&right.left_node.as_ref().unwrap(), left, 2.0, f.clone()),
-                        || find_wsp_parallel(&right.right_node.as_ref().unwrap(), left, 2.0, f.clone()),
+                        || {
+                            find_wsp_parallel(
+                                &right.left_node.as_ref().unwrap(),
+                                left,
+                                2.0,
+                                f.clone(),
+                            )
+                        },
+                        || {
+                            find_wsp_parallel(
+                                &right.right_node.as_ref().unwrap(),
+                                left,
+                                2.0,
+                                f.clone(),
+                            )
+                        },
                     );
                 }
             }
@@ -196,12 +224,8 @@ where
     }
     if !(tree.is_leaf()) && true {
         thread::scope(|par| {
-            par.spawn(|| {
-                compute_wspd_parallel(&tree.left_node.as_ref().unwrap(), s, f.clone())
-            });
-            par.spawn(|| {
-                compute_wspd_parallel(&tree.right_node.as_ref().unwrap(), s, f.clone())
-            });
+            par.spawn(|| compute_wspd_parallel(&tree.left_node.as_ref().unwrap(), s, f.clone()));
+            par.spawn(|| compute_wspd_parallel(&tree.right_node.as_ref().unwrap(), s, f.clone()));
         });
         find_wsp_parallel(
             tree.left_node.as_ref().unwrap(),
@@ -213,7 +237,9 @@ where
 }
 
 pub fn wspd_parallel(tree: &KDTree, _s: f64) -> Vec<Wsp> {
-    let mut wg = Arc::new(Mutex::new(WspdNormalParallel::new(Vec::with_capacity(tree.size()))));
+    let mut wg = Arc::new(Mutex::new(WspdNormalParallel::new(Vec::with_capacity(
+        tree.size(),
+    ))));
     compute_wspd_parallel(tree, &_s, wg.clone());
     let res = wg.lock().unwrap().get_res();
     res
