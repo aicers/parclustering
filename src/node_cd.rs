@@ -9,17 +9,19 @@ pub fn node_cd(
     cd_max: f64,
 ) {
     if node.is_leaf() {
-        for elem in &node.points {
+        /*for elem in &node.points {
             println!("{:?}", elem);
             let target_cd = core_dist[point_set.iter().position(|x| x == elem).unwrap()];
-            if target_cd > cd_max {
+            if target_cd > f64::MIN {
                 node.cd_max = target_cd;
             }
 
-            if target_cd < cd_min {
+            if target_cd < f64::MAX {
                 node.cd_min = target_cd;
             }
-        }
+        }*/
+        node.cd_max = node.cd_max_calc(core_dist, point_set);
+        node.cd_min = node.cd_min_calc(core_dist, point_set);
     } else {
         if node.size() > 2000 {
             rayon::join(
@@ -43,15 +45,17 @@ pub fn node_cd(
             }
         };
 
-        node.cd_max = if let (Some(ref left_node), Some(ref right_node)) =
+        node.cd_max = node.cd_max_calc(core_dist, point_set);
+        node.cd_min = node.cd_min_calc(core_dist, point_set);
+        /*node.cd_max = if let (Some(ref left_node), Some(ref right_node)) =
             (&node.left_node, &node.right_node)
         {
             f64::max(left_node.as_ref().cd_max, right_node.as_ref().cd_max)
         } else {
             if let Some(ref left_node) = node.left_node {
-                f64::max(left_node.as_ref().cd_max, 0.0)
+                f64::max(left_node.as_ref().cd_max, f64::MIN)
             } else if let Some(ref right_node) = node.right_node {
-                f64::max(0.0, right_node.as_ref().cd_max)
+                f64::max(f64::MIN, right_node.as_ref().cd_max)
             } else {
                 1.
             }
@@ -63,13 +67,13 @@ pub fn node_cd(
             f64::max(left_node.as_ref().cd_min, right_node.as_ref().cd_min)
         } else {
             if let Some(ref left_node) = node.left_node {
-                f64::min(left_node.as_ref().cd_min, 0.0)
+                f64::min(left_node.as_ref().cd_min, f64::MAX)
             } else if let Some(ref right_node) = node.right_node {
-                f64::min(0.0, right_node.as_ref().cd_min)
+                f64::min(f64::MAX, right_node.as_ref().cd_min)
             } else {
                 5.
             }
-        };
+        };*/
     }
 }
 

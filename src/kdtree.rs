@@ -203,12 +203,32 @@ impl KDTree {
 
     pub fn diag(&self) -> f64 {
         let mut res = 0.;
-
+        if self.size() == 1 {
+            return 0.;
+        }
         for d in 0..self.size() {
             let tmp = self.get_max(d) - self.get_min(d);
             res += tmp * tmp;
         }
         return f64::sqrt(res);
+    }
+
+    pub fn cd_max_calc(&mut self, core_dist: &Vec<f64>, point_set: &Vec<Point>) -> f64 {
+        let cd_list = self
+            .points
+            .iter()
+            .map(|y| core_dist[point_set.iter().position(|x| x == y).unwrap()])
+            .collect::<Vec<f64>>();
+        cd_list.iter().fold(f64::NEG_INFINITY, |acc, &x| acc.max(x))
+    }
+
+    pub fn cd_min_calc(&mut self, core_dist: &Vec<f64>, point_set: &Vec<Point>) -> f64 {
+        let cd_list = self
+            .points
+            .iter()
+            .map(|y| core_dist[point_set.iter().position(|x| x == y).unwrap()])
+            .collect::<Vec<f64>>();
+        cd_list.iter().fold(f64::INFINITY, |acc, &x| acc.min(x))
     }
 
     pub fn nearest_neighbours(&self, point: &Point, k: usize) -> Vec<(Wrapper, Point)> {

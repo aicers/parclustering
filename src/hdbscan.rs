@@ -1,6 +1,7 @@
 use crate::kdtree::KDTree;
 use crate::node_cd::node_cd;
 use crate::point::Point;
+use crate::wspdparallel::filter_wspd_paraller;
 
 mod tests {
     use super::*;
@@ -39,8 +40,14 @@ mod tests {
         let mut cd_min = f64::MAX;
         let mut cd_max = f64::MIN;
 
-        println!("{:?}", kdtree);
+        //println!("{:?}", kdtree);
         node_cd(&mut kdtree, &random_points, &core_dist, cd_min, cd_max);
-        println!("{:#?}", kdtree);
+        let beta = 2.;
+        let rho_lo = 0.;
+        let rho_hi = f64::MIN;
+
+        let bccps =
+            filter_wspd_paraller(&beta, &rho_lo, rho_hi, &kdtree, &core_dist, &random_points);
+        println!("{:?}", kdtree);
     }
 }

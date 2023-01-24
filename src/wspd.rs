@@ -223,13 +223,30 @@ where
         computeWspdSerial(tree, s, f.clone());
     }
     if !(tree.is_leaf()) && true {
-        thread::scope(|par| {
-            par.spawn(|| compute_wspd_parallel(&tree.left_node.as_ref().unwrap(), s, f.clone()));
-            par.spawn(|| compute_wspd_parallel(&tree.right_node.as_ref().unwrap(), s, f.clone()));
-        });
+        rayon::join(
+            || {
+                if let Some(ref left_node) = tree.left_node {
+                    compute_wspd_parallel(&left_node.as_ref(), s, f.clone())
+                }
+            },
+            || {
+                if let Some(ref right_node) = tree.right_node {
+                    compute_wspd_parallel(&right_node.as_ref(), s, f.clone())
+                }
+            },
+        );
+        let empty = KDTree::empty();
         find_wsp_parallel(
-            tree.left_node.as_ref().unwrap(),
-            tree.right_node.as_ref().unwrap(),
+            if let Some(ref left_node) = tree.left_node {
+                left_node.as_ref()
+            } else {
+                &empty
+            },
+            if let Some(ref right_node) = tree.right_node {
+                right_node.as_ref()
+            } else {
+                &empty
+            },
             2.0,
             f.clone(),
         );
@@ -297,6 +314,11 @@ mod tests {
         .collect();
 
         let kdtree = KDTree::build(&mut wp_points);
+        println!("{:?}", kdtree);
+        println!("====================");
+        let res = if let Some(ref kdtree) = kdtree.left_node {
+            println!("{:?}", kdtree);
+        };
 
         let mut core_dist: Vec<f64> = std::iter::repeat(0.).take(wp_points.len()).collect();
 

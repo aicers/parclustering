@@ -206,7 +206,7 @@ impl<'a: 'b, 'b> WspdGetParallel<'a, 'b> {
     }
 }
 
-fn filter_wspd_paraller<'a, 'b: 'a, 'c: 'a>(
+pub fn filter_wspd_paraller<'a, 'b: 'a, 'c: 'a>(
     beta: &'b f64,
     rho_lo: &'b f64,
     _rho_hi: f64,
