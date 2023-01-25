@@ -9,11 +9,7 @@ pub fn quickselect_by<T>(
 where
     T: Clone,
 {
-    let mut pivot_index = if point_list.len() == 1 {
-        0
-    } else {
-        thread_rng().gen_range(0..point_list.len())
-    };
+    let mut pivot_index = thread_rng().gen_range(0..point_list.len());
     pivot_index = partition_by(point_list, pivot_index, &|a: &T, b: &T| cmp(a, b));
 
     let list_len = point_list.len();

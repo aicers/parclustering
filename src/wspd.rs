@@ -94,12 +94,24 @@ where
     T: WspdFilter,
 {
     if !tree.is_leaf() && f.lock().unwrap().start(tree) {
-        computeWspdSerial(tree.left_node.as_ref().unwrap(), s, f.clone());
-        computeWspdSerial(tree.right_node.as_ref().unwrap(), s, f.clone());
-
+        if let Some(ref left_node) = tree.left_node {
+            computeWspdSerial(left_node.as_ref(), s, f.clone());
+        }
+        if let Some(ref right_node) = tree.right_node {
+            computeWspdSerial(right_node.as_ref(), s, f.clone());
+        }
+        let empty = KDTree::empty();
         find_wsp_serial(
-            tree.left_node.as_ref().unwrap(),
-            tree.right_node.as_ref().unwrap(),
+            if let Some(ref left_node) = tree.left_node {
+                left_node.as_ref()
+            } else {
+                &empty
+            },
+            if let Some(ref right_node) = tree.right_node {
+                right_node.as_ref()
+            } else {
+                &empty
+            },
             2.,
             f.clone(),
         );
@@ -152,7 +164,7 @@ pub fn find_wsp_parallel<'a, T>(left: &'a KDTree, right: &'a KDTree, s: f64, f: 
 where
     T: WspdFilter + std::marker::Sync + std::marker::Send,
 {
-    if left.points.len() + right.points.len() < 2000 {
+    if left.size() + right.size() < 2000 {
         find_wsp_serial(left, right, 2., f);
     } else {
         if well_separated(left, right, 2.0) {
@@ -273,7 +285,7 @@ pub fn geometrically_separated(left: &KDTree, right: &KDTree, s: f64) -> bool {
     let mut left_circle_diam: f64 = 0.0;
     let mut right_circle_diam: f64 = 0.0;
     let mut circle_distance: f64 = 0.0;
-    let dimension = left.points[0].coords.len();
+    let dimension = left.dim();
     for d in 0..dimension {
         let left_tmp_diff = left.get_max(d) - left.get_min(d);
         let right_tmp_diff = right.get_max(d) - right.get_min(d);

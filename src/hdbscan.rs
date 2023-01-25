@@ -40,7 +40,6 @@ mod tests {
         let mut cd_min = f64::MAX;
         let mut cd_max = f64::MIN;
 
-        //println!("{:?}", kdtree);
         node_cd(&mut kdtree, &random_points, &core_dist, cd_min, cd_max);
         let beta = 2.;
         let rho_lo = 0.;
@@ -48,6 +47,7 @@ mod tests {
 
         let bccps =
             filter_wspd_paraller(&beta, &rho_lo, rho_hi, &kdtree, &core_dist, &random_points);
+        println!("{:?}", bccps);
         println!("{:?}", kdtree);
     }
 }

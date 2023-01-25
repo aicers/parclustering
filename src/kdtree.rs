@@ -166,7 +166,7 @@ impl KDTree {
 
     pub fn get_min(&self, index_dim: usize) -> f64 {
         let mut points = self.points.clone();
-        let max_elem_index = 1;
+        let max_elem_index = 0;
         let res = quickselect_by(&mut points, max_elem_index, &|a, b| {
             a.coords[index_dim]
                 .partial_cmp(&b.coords[index_dim])
@@ -178,20 +178,29 @@ impl KDTree {
     pub fn size(&self) -> usize {
         self.points.len()
     }
+
+    pub fn dim(&self) -> usize {
+        if self.size() == 0 {
+            panic!("Empty dataset")
+        } else {
+            self.points[0].coords.len()
+        }
+    }
     pub fn get_max(&self, index_dim: usize) -> f64 {
         let mut points = self.points.clone();
-        let max_elem_index = points.len();
+        let max_elem_index = points.len() - 1;
         let res = quickselect_by(&mut points, max_elem_index, &|a, b| {
             a.coords[index_dim]
                 .partial_cmp(&b.coords[index_dim])
                 .unwrap()
         });
         res.coords[index_dim]
+        //self.points.iter().map(|point| Wrapper(point.coords[index_dim])).max().unwrap().0
     }
 
     pub fn lMax(&self) -> f64 {
         let mut max_val: f64 = 0.0;
-        let point_dim = self.points[0].coords.len();
+        let point_dim = self.dim();
         for d in 0..point_dim {
             let temp_val = self.get_max(d) - self.get_min(d);
             if temp_val > max_val {
@@ -205,12 +214,13 @@ impl KDTree {
         let mut res = 0.;
         if self.size() == 1 {
             return 0.;
+        } else {
+            for d in 0..self.dim() {
+                let tmp = self.get_max(d) - self.get_min(d);
+                res += tmp * tmp;
+            }
+            return f64::sqrt(res);
         }
-        for d in 0..self.size() {
-            let tmp = self.get_max(d) - self.get_min(d);
-            res += tmp * tmp;
-        }
-        return f64::sqrt(res);
     }
 
     pub fn cd_max_calc(&mut self, core_dist: &Vec<f64>, point_set: &Vec<Point>) -> f64 {
@@ -240,7 +250,7 @@ impl KDTree {
         while !queue.is_empty() {
             let node = queue.pop_front().unwrap();
 
-            if node.points.len() == 1 {
+            if node.size() == 1 {
                 let distance = Wrapper(point.distance(&node.points[0]));
                 if closest_points.len() >= k {
                     closest_points.sort_by(|a, b| a.0.cmp(&b.0));

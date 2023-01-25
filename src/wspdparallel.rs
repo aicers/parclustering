@@ -31,7 +31,7 @@ pub fn unreachable(left: &KDTree, right: &KDTree) -> bool {
     let mut left_circle_diam: f64 = 0.0;
     let mut right_circle_diam: f64 = 0.0;
     let mut circle_distance: f64 = 0.0;
-    let dimension = left.points[0].coords.len();
+    let dimension = left.dim();
     for d in 0..dimension {
         let left_tmp_diff = left.get_max(d) - left.get_min(d);
         let right_tmp_diff = right.get_max(d) - right.get_min(d);
