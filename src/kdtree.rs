@@ -12,7 +12,7 @@ use std::collections::VecDeque;
 
 #[derive(Debug, Clone)]
 pub struct KDTree {
-    pub id: i32,
+    pub id: f64,
     pub points: Vec<Point>,
     pub split_value: Point,
     pub left_node: Option<Box<KDTree>>,
@@ -73,7 +73,7 @@ impl KDTree {
 
     pub fn empty() -> Self {
         Self {
-            id: -1,
+            id: -1.0,
             points: vec![Point::default()],
             split_value: Point::default(),
             left_node: None,
@@ -87,7 +87,7 @@ impl KDTree {
         let points_len = point_list.len();
         if points_len == 1 {
             return KDTree {
-                id: -1,
+                id: -1.0,
                 points: point_list.to_vec(),
                 split_value: point_list[0].clone(),
                 left_node: None,
@@ -98,7 +98,7 @@ impl KDTree {
             };
         } else if point_list.is_empty() {
             return KDTree {
-                id: -1,
+                id: -1.0,
                 points: point_list.to_vec(),
                 split_value: Point { coords: vec![0.] },
                 left_node: None,
@@ -131,7 +131,7 @@ impl KDTree {
         };
 
         KDTree {
-            id: -1,
+            id: -1.0,
             points: point_list.to_vec(),
             split_value: pivot,
             dimension: dim,
@@ -149,18 +149,18 @@ impl KDTree {
         }
     }
     pub fn reset_id(&mut self) {
-        self.id = -1;
+        self.id = -1.0;
     }
 
-    pub fn set_id(&mut self, n: i32) {
+    pub fn set_id(&mut self, n: f64) {
         self.id = n;
     }
 
     pub fn has_id(&self) -> bool {
-        self.id != -1
+        self.id != -1.0
     }
 
-    pub fn get_id(&self) -> i32 {
+    pub fn get_id(&self) -> f64 {
         self.id
     }
 

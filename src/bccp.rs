@@ -33,7 +33,7 @@ pub fn bcp_helper<'a>(
     r: &'a mut Bcp,
     coreDist: &'a Vec<f64>,
     point_set: &'a Vec<Point>,
-) -> &mut Bcp {
+) -> &'a mut Bcp {
     if left.is_leaf() && right.is_leaf() {
         for i in 0..left.points.len() {
             for j in 0..right.points.len() {

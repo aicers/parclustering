@@ -1,5 +1,8 @@
 use crate::wrapper::Wrapper;
-use std::cmp::{Ord, Ordering};
+use std::{
+    cmp::{Ord, Ordering},
+    ops::Deref,
+};
 #[derive(Debug, Clone)]
 pub struct Point {
     pub coords: Vec<f64>,
@@ -42,6 +45,16 @@ impl PartialEq for Point {
     }
 }
 impl Eq for Point {}
+
+/*
+impl Deref for Point {
+    type Target = Point;
+
+    fn deref(&self) -> &Self::Target {
+        self
+    }
+}
+*/
 impl Point {
     pub fn distance(&self, other: &Point) -> f64 {
         self.coords
