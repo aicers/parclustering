@@ -43,18 +43,8 @@ pub fn bcp_helper<'a>(
     if left.is_leaf() && right.is_leaf() {
         for i in 0..left.size() {
             for j in 0..right.size() {
-                let dist = f64::max(
-                    (left.points[i]).distance(&right.points[j]),
-                    core_dist[point_set.iter().position(|x| x == &left.points[i]).unwrap()],
-                );
-                let dist = f64::max(
-                    dist,
-                    core_dist[point_set
-                        .iter()
-                        .position(|x| x == &right.points[j])
-                        .unwrap()],
-                );
-                r.update(left.points[i].clone(), right.points[j].clone(), dist);
+                
+                r.update(left.points[i].clone(), right.points[j].clone(), left.points[i].distance(&right.points[j]));
             }
         }
     } else {
@@ -152,7 +142,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn bccp_res() {
+    fn bccp_emst() {
         let mut point_set: Vec<Point> = sample_points();
         let min_pts = 3;
         let kdtree = KDTree::build(&mut point_set);
@@ -160,12 +150,11 @@ mod tests {
         let mut r = Bcp::new();
         let left = kdtree.left_node.unwrap();
         let right = kdtree.right_node.unwrap();
-
         let bccps = bcp_helper(&right, &right, &mut r, &point_set_cd, &point_set);
         let brute_f = brute_force_bcp(&left, &right, &point_set_cd, &point_set);
 
-        //assert_eq!(r.u,brute_f.u);
-        //assert_eq!(r.v,brute_f.v);
+        //assert_eq!(r.u, brute_f.u);
+        //assert_eq!(r.v, brute_f.v);
         assert_eq!(r.dist, brute_f.dist);
     }
 }

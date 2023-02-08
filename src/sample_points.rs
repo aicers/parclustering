@@ -1,3 +1,5 @@
+use rand::{thread_rng, Rng};
+
 use crate::point::Point;
 
 pub fn sample_points() -> Vec<Point> {
@@ -48,15 +50,39 @@ pub fn sample_points() -> Vec<Point> {
     result
 }
 
+pub fn n_random_points(n: usize, d: usize) -> Vec<Point> {
+    if n < 1 {
+        panic!("Number of Points must be greater than 1");
+    } else if d < 1 {
+        panic!("Dimension can not be lower than 1");
+    }
+
+    let mut rng = thread_rng();
+    let n_random = n;
+
+    //Generating random points for our dataset
+    let mut make_random_point = || Point {
+        coords: (0..d).map(|_| (rng.gen::<f64>() - 0.5) * 100.0).collect(),
+    };
+    (0..n_random).map(|_| make_random_point()).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[ignore = "Creates sample points only"]
+    #[ignore = "Checked"]
     #[test]
     fn get_sample_points() {
         let sample_pts = sample_points();
 
         println!("{sample_pts:?}");
+    }
+
+    #[test]
+    fn random_pts() {
+        let rnd_pts = n_random_points(50, 3);
+
+        println!("{rnd_pts:?}");
     }
 }

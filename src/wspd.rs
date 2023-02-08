@@ -78,7 +78,7 @@ where
             find_wsp_serial(&left.left_node.as_ref().unwrap(), right, 2.0, f.clone());
             find_wsp_serial(&left.right_node.as_ref().unwrap(), right, 2.0, f.clone());
         } else {
-            if left.lMax() > right.lMax() {
+            if left.l_max() > right.l_max() {
                 find_wsp_serial(&left.left_node.as_ref().unwrap(), right, 2.0, f.clone());
                 find_wsp_serial(&left.right_node.as_ref().unwrap(), right, 2.0, f.clone());
             } else {
@@ -183,7 +183,7 @@ where
                     || find_wsp_parallel(&left.right_node.as_ref().unwrap(), right, 2.0, f.clone()),
                 );
             } else {
-                if left.lMax() > right.lMax() {
+                if left.l_max() > right.l_max() {
                     rayon::join(
                         || {
                             find_wsp_parallel(
@@ -278,7 +278,7 @@ pub fn wspd_parallel(tree: &KDTree, _s: f64) -> Vec<Wsp> {
 //--------------------------------------------------------------------------------
 
 pub fn well_separated(left: &KDTree, right: &KDTree, s: f64) -> bool {
-    geometrically_separated(left, right, 2.0)
+    geometrically_separated(left, right, s)
 }
 
 pub fn geometrically_separated(left: &KDTree, right: &KDTree, s: f64) -> bool {
@@ -309,35 +309,28 @@ pub fn geometrically_separated(left: &KDTree, right: &KDTree, s: f64) -> bool {
 //--------------------------------------------------------------------------------
 #[cfg(test)]
 mod tests {
+    use crate::{
+        node_cd::point_set_cd,
+        sample_points::{n_random_points, sample_points},
+    };
+
     use super::*;
     #[test]
-    fn core_distance() {
-        let minPts = 3;
-        let mut wp_points: Vec<Point> = [
-            [2.0, 3.0],
-            [5.0, 4.0],
-            [9.0, 6.0],
-            [4.0, 7.0],
-            [8.0, 1.0],
-            [7.0, 2.0],
-        ]
-        .iter()
-        .map(|x| Point { coords: x.to_vec() })
-        .collect();
+    fn wpsd_set() {
+        let min_pts = 3;
+        let mut point_set: Vec<Point> = sample_points();
 
-        let kdtree = KDTree::build(&mut wp_points);
-        println!("{:?}", kdtree);
+        let kdtree = KDTree::build(&mut point_set);
+        //println!("{:?}", kdtree);
         println!("====================");
-        let res = if let Some(ref kdtree) = kdtree.left_node {
-            println!("{:?}", kdtree);
-        };
 
-        let mut core_dist: Vec<f64> = std::iter::repeat(0.).take(wp_points.len()).collect();
+        let mut core_dist: Vec<f64> = point_set_cd(&point_set, &kdtree, min_pts);
+        let wsp_pairs = wspd_serial(&kdtree, 2.);
 
-        for (i, elem) in wp_points.iter().enumerate() {
-            core_dist[i] = kdtree.nearest_neighbours(elem, minPts).last().unwrap().0 .0;
-        }
+        //println!("{core_dist:?}");
+        let check = well_separated(&kdtree.left_node.unwrap(), &kdtree.right_node.unwrap(), 2.);
 
-        println!("{:?}", core_dist);
+        println!("{check}");
+        println!("{wsp_pairs:?}");
     }
 }

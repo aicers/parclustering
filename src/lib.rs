@@ -1,5 +1,6 @@
 #![recursion_limit = "256"]
 mod bccp;
+mod bccp_emst;
 mod edge;
 mod file_handler;
 mod hdbscan;

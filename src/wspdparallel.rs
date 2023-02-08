@@ -1,4 +1,4 @@
-use crate::bccp::{bcp_helper, Bcp};
+use crate::bccp::{bcp_helper, brute_force_bcp, Bcp};
 use crate::kdtree::KDTree;
 use crate::node_distance::node_distance;
 use crate::point::Point;
@@ -143,7 +143,8 @@ impl<'a, 'b> WspdFilter for WspdGetParallel<'a, 'b> {
 
     fn run(&mut self, left: &KDTree, right: &KDTree) {
         let mut ra = Bcp::new();
-        let bcp = bcp_helper(&left, &right, &mut ra, self.core_dist, self.point_set);
+        //let bcp = bcp_helper(&left, &right, &mut ra, self.core_dist, self.point_set);
+        let bcp = brute_force_bcp(left, right, self.core_dist, self.point_set);
         if left.size() + right.size() <= *self.beta as usize
             && bcp.dist >= *self.rho_lo
             && bcp.dist < self.rho_hi
@@ -227,4 +228,32 @@ pub fn filter_wspd_paraller<'a, 'b: 'a, 'c: 'a>(
 
     let _t_rho_hi = &my_rho.lock().unwrap().get_rho();
     return my_splitter.lock().unwrap().get_res();
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::{
+        node_cd::{node_cd, point_set_cd},
+        sample_points::sample_points,
+    };
+
+    use super::*;
+
+    #[test]
+    fn filtered_pairs() {
+        let min_pts: usize = 3;
+        let mut point_set = sample_points();
+        let mut kdtree = KDTree::build(&mut point_set);
+        let mut core_dist: Vec<f64> = point_set_cd(&point_set, &kdtree, 3);
+        let mut beta = 2.;
+        let mut rho_lo = 0.;
+        let mut rho_hi = f64::MIN;
+        let cd_min = f64::MAX;
+        let cd_max = f64::MIN;
+        node_cd(&mut kdtree, &point_set, &core_dist, cd_min, cd_max);
+        let bccps = filter_wspd_paraller(&4., &rho_lo, rho_hi, &kdtree, &core_dist, &point_set);
+
+        eprintln!("{bccps:?}");
+    }
 }

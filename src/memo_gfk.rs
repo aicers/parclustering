@@ -1,4 +1,5 @@
 use crate::speculative_for::{speculative_for, Reservation};
+use crate::union_find::UFConstruct;
 use crate::{
     hdbscan::WEdge,
     union_find::{EdgeUnionFind, UnionFind},
@@ -88,13 +89,13 @@ struct EdgeUnionFindStep<'a> {
     e: &'a mut Vec<IndexedEdge>,
     r: &'a mut Vec<Reservation>,
     e_real: Vec<IndexedEdge>,
-    uf: &'a mut EdgeUnionFind,
+    uf: &'a mut Arc<Mutex<EdgeUnionFind>>,
 }
 impl<'a> ReservationFilter for EdgeUnionFindStep<'a> {
     fn reserve(&mut self, i: f64) -> bool {
-        self.e[i as usize].u = self.uf.find(self.e[i as usize].u);
+        self.e[i as usize].u = self.uf.lock().unwrap().find(self.e[i as usize].u);
         let u = self.e[i as usize].u;
-        self.e[i as usize].v = self.uf.find(self.e[i as usize].v);
+        self.e[i as usize].v = self.uf.lock().unwrap().find(self.e[i as usize].v);
         let v = self.e[i as usize].v;
 
         if u != v {
@@ -115,10 +116,14 @@ impl<'a> ReservationFilter for EdgeUnionFindStep<'a> {
         if self.r[v as usize].check(i) {
             self.r[u as usize].check_reset(i);
             self.uf
+                .lock()
+                .unwrap()
                 .link(v, u, v_real, u_real, self.e_real[i as usize].weight);
             return true;
         } else if self.r[u as usize].check(i) {
             self.uf
+                .lock()
+                .unwrap()
                 .link(u, v, u_real, v_real, self.e_real[i as usize].weight);
             return true;
         } else {
@@ -130,7 +135,7 @@ impl<'a> EdgeUnionFindStep<'a> {
     fn new(
         e: &'a mut Vec<IndexedEdge>,
         r: &'a mut Vec<Reservation>,
-        uf: &'a mut EdgeUnionFind,
+        uf: &'a mut Arc<Mutex<EdgeUnionFind>>,
     ) -> Self {
         let mut e_real = e.clone();
         Self { e, r, e_real, uf }
@@ -177,7 +182,7 @@ pub fn kruskal(e: &mut Vec<WEdge>, n: usize) -> Vec<f64> {
     return mst;
 }
 
-pub fn batch_kruskal(e: &mut Vec<WEdge>, n: usize, uf: &mut EdgeUnionFind) {
+pub fn batch_kruskal(e: &mut Vec<WEdge>, n: usize, uf: &mut Arc<Mutex<EdgeUnionFind>>) {
     let m = e.len();
     let k = std::cmp::min((5 * n) / 4, m);
 

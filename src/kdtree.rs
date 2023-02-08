@@ -142,7 +142,7 @@ impl KDTree {
         }
     }
     pub fn is_leaf(&self) -> bool {
-        if Some(&self.left_node) == None && Some(&self.right_node) == None {
+        if self.left_node == None {
             true
         } else {
             false
@@ -198,7 +198,7 @@ impl KDTree {
         //self.points.iter().map(|point| Wrapper(point.coords[index_dim])).max().unwrap().0
     }
 
-    pub fn lMax(&self) -> f64 {
+    pub fn l_max(&self) -> f64 {
         let mut max_val: f64 = 0.0;
         let point_dim = self.dim();
         for d in 0..point_dim {
@@ -281,6 +281,8 @@ impl KDTree {
 
 #[cfg(test)]
 mod tests {
+    use crate::sample_points::n_random_points;
+
     use super::*;
 
     #[ignore]
@@ -308,14 +310,10 @@ mod tests {
         assert_eq!(closest_pts[3].1, copy[3]);
     }
 
+    #[ignore]
     #[test]
     fn std_test() {
-        let mut rng = thread_rng();
-        let mut wp_points: Vec<Point> = (0..5)
-            .map(|_| Point {
-                coords: vec![rng.gen_range(0.0..30.0), rng.gen_range(0.0..30.0)],
-            })
-            .collect();
+        let mut wp_points: Vec<Point> = n_random_points(20, 2);
         println!("{:?}", wp_points);
         let kdtree = KDTree::build(&mut wp_points);
         let target = Point {
@@ -350,7 +348,8 @@ mod tests {
 
         plotlib::page::Page::single(&v).save("kdtree.svg").unwrap();
     }
-    /*
+
+    #[ignore]
     #[test]
     fn empty_list() {
         let mut empty_vec = vec![Point { coords: vec![0.0] }];
@@ -360,28 +359,20 @@ mod tests {
         println!("{:#?}", kdtree);
     }
 
+    #[ignore]
     #[test]
     fn one_point() {
         let mut single_val = vec![Point { coords: vec![0.] }];
 
         let kdtree = KDTree::build(&mut single_val);
 
-        println!("{:#?}", kdtree);
+        println!("{:#?}", kdtree.is_leaf());
     }
 
+    #[ignore]
     #[test]
     fn find_nearest_points() {
-        let mut wp_points: Vec<Point> = [
-            [2.0, 3.0],
-            [5.0, 4.0],
-            [9.0, 6.0],
-            [4.0, 7.0],
-            [8.0, 1.0],
-            [7.0, 2.0],
-        ]
-        .iter()
-        .map(|x| Point { coords: x.to_vec() })
-        .collect();
+        let mut wp_points: Vec<Point> = n_random_points(10, 2);
 
         let kdtree = KDTree::build(&mut wp_points);
         let target: Point = Point {
@@ -389,7 +380,6 @@ mod tests {
         };
         let nearest = kdtree.nearest_neighbours(&target, 3);
 
-        println!("{:?}", nearest);
-        println!("{:#?}", kdtree);
-    }*/
+        println!("{:?}", kdtree);
+    }
 }

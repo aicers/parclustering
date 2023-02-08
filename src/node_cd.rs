@@ -1,5 +1,6 @@
 use crate::kdtree::KDTree;
 use crate::point::Point;
+use crate::sample_points::sample_points;
 
 pub fn node_cd(
     node: &mut KDTree,
@@ -47,6 +48,7 @@ pub fn node_cd(
 
         node.cd_max = node.cd_max_calc(core_dist, point_set);
         node.cd_min = node.cd_min_calc(core_dist, point_set);
+
         /*node.cd_max = if let (Some(ref left_node), Some(ref right_node)) =
             (&node.left_node, &node.right_node)
         {
@@ -77,25 +79,33 @@ pub fn node_cd(
     }
 }
 
+pub fn point_set_cd(point_set: &Vec<Point>, kdtree: &KDTree, min_pts: usize) -> Vec<f64> {
+    let mut core_dist: Vec<f64> = std::iter::repeat(0.).take(point_set.len()).collect();
+    for (i, elem) in point_set.iter().enumerate() {
+        core_dist[i] = kdtree
+            .nearest_neighbours(elem, min_pts)
+            .last()
+            .unwrap()
+            .0
+             .0;
+    }
+    core_dist
+}
+
 #[allow(unused_imports)]
 mod tests {
-    use super::*;
-    use rand::thread_rng;
-    use rand::Rng;
-    #[ignore = "Not complete yet"]
-    #[test]
-    fn hdbscan() {
-        let mut rng = thread_rng();
-        let n_random = 1_000_000;
-        let mut make_random_point = || Point {
-            coords: (0..100)
-                .map(|_| (rng.gen::<f64>() - 0.5) * 1000000.0)
-                .collect(),
-        };
-        let mut random_points: Vec<Point> = (0..n_random).map(|_| make_random_point()).collect();
-        let _search_point = random_points[0].clone();
 
-        let _kdtree = KDTree::build(&mut random_points);
-        //let closest_pts = kdtree.nearest_neighbours(&search_point, 4);
+    use super::*;
+    #[ignore = "Checked"]
+    #[test]
+    fn node_core_dist() {
+        let mut point_set: Vec<Point> = sample_points();
+        let min_pts = 3;
+        let mut kdtree = KDTree::build(&mut point_set);
+        let point_set_cd = point_set_cd(&point_set, &kdtree, min_pts);
+        let cd_min = f64::MAX;
+        let cd_max = f64::MIN;
+        let node_cd = node_cd(&mut kdtree, &point_set, &point_set_cd, cd_min, cd_max);
+        println!("{kdtree:?}");
     }
 }

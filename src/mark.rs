@@ -1,6 +1,11 @@
+use crate::union_find::UFConstruct;
 use std::sync::{Arc, Mutex};
 
-use crate::{kdtree::KDTree, point::Point, union_find::{UnionFind, EdgeUnionFind}};
+use crate::{
+    kdtree::KDTree,
+    point::Point,
+    union_find::{EdgeUnionFind, UnionFind},
+};
 
 pub fn mark_all(tree: &mut KDTree, n: f64) {
     if !tree.is_leaf() && tree.get_id() != n {
