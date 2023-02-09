@@ -24,20 +24,40 @@ mod tests {
         node_cd::point_set_cd,
         point::Point,
         sample_points::{n_random_points, sample_points},
+        wspd::geometrically_separated,
     };
 
     use super::*;
     #[ignore = "Checked"]
     #[test]
     fn node_dist() {
-        let mut point_set: Vec<Point> = sample_points();
+        let mut point_set: Vec<Point> = vec![
+            Point {
+                coords: vec![5., 1.],
+            },
+            Point {
+                coords: vec![4., 8.],
+            },
+            Point {
+                coords: vec![3., 7.],
+            },
+            Point {
+                coords: vec![1., 9.],
+            },
+            Point {
+                coords: vec![7., 3.],
+            },
+            Point {
+                coords: vec![2., 5.],
+            },
+        ];
         let min_pts = 3;
         let kdtree = KDTree::build(&mut point_set);
-        let left = kdtree.left_node.unwrap();
-        let right = kdtree.right_node.unwrap();
+        let left = &kdtree.left_node.as_ref().unwrap();
+        let right = &kdtree.right_node.as_ref().unwrap();
 
+        println!("{:?}", kdtree.is_leaf());
         let node_dist = node_distance(&left, &right);
-
-        println!("{node_dist:?}");
+        println!("{:?}", node_dist);
     }
 }

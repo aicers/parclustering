@@ -206,3 +206,55 @@ pub fn batch_kruskal(e: &mut Vec<WEdge>, n: usize, uf: &mut Arc<Mutex<EdgeUnionF
         Arc::new(Mutex::new(EdgeUnionFindStep::new(&mut iw, &mut r, uf)));
     speculative_for(&uf_step, 0., iw_size as f64, 20., false, -1.);
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        kdtree::KDTree,
+        node_cd::{self, node_cd, point_set_cd},
+        sample_points::{n_random_points, sample_points},
+        wspdparallel::filter_wspd_paraller,
+    };
+
+    use super::*;
+    #[test]
+    fn mst_kruskal() {
+        let min_pts = 3;
+
+        let mut random_points = sample_points();
+
+        //Creating KD-Tree with above generated random points
+        let mut kdtree = KDTree::build(&mut random_points);
+
+        //Storing all the core distances of points in one set
+        let mut core_dist: Vec<f64> = point_set_cd(&random_points, &kdtree, min_pts);
+        //println!("{:?}", core_dist);
+
+        let mut _cd_min = f64::MAX;
+        let mut _cd_max = f64::MIN;
+
+        node_cd(&mut kdtree, &random_points, &core_dist, _cd_min, _cd_max);
+        let mut beta = 2.;
+        let mut rho_lo = 0.;
+        let mut rho_hi = f64::MIN;
+        let mut num_edges: usize = 0;
+
+        let mut uf = Arc::new(Mutex::new(EdgeUnionFind::new(random_points.len())));
+        let bccps =
+            filter_wspd_paraller(&beta, &rho_lo, rho_hi, &kdtree, &core_dist, &random_points);
+
+        let mut e: Vec<WEdge> = bccps
+            .iter()
+            .map(|bcp| {
+                WEdge::new(
+                    random_points.iter().position(|x| *x == bcp.u).unwrap(),
+                    random_points.iter().position(|x| *x == bcp.v).unwrap(),
+                    bcp.dist,
+                )
+            })
+            .collect();
+        let set = batch_kruskal(&mut e, random_points.len(), &mut uf);
+
+        println!("{:?}",set);
+    }
+}

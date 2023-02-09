@@ -68,6 +68,7 @@ where
     }
 
     if well_separated(left, right, 2.0) {
+        f.lock().unwrap().run(left, right);
     } else {
         if left.is_leaf() && right.is_leaf() {
             panic!("Leaves not well separated")
@@ -89,16 +90,16 @@ where
     }
 }
 
-fn computeWspdSerial<'a, T>(tree: &'a KDTree, s: &'a f64, f: Arc<Mutex<T>>)
+fn compute_wspd_serial<'a, T>(tree: &'a KDTree, s: &'a f64, f: Arc<Mutex<T>>)
 where
     T: WspdFilter,
 {
     if !tree.is_leaf() && f.lock().unwrap().start(tree) {
         if let Some(ref left_node) = tree.left_node {
-            computeWspdSerial(left_node.as_ref(), s, f.clone());
+            compute_wspd_serial(left_node.as_ref(), s, f.clone());
         }
         if let Some(ref right_node) = tree.right_node {
-            computeWspdSerial(right_node.as_ref(), s, f.clone());
+            compute_wspd_serial(right_node.as_ref(), s, f.clone());
         }
         let empty = KDTree::empty();
         find_wsp_serial(
@@ -121,7 +122,7 @@ where
 pub fn wspd_serial(tree: &KDTree, _s: f64) -> Vec<Wsp> {
     let out = Vec::new();
     let mut wg = Arc::new(Mutex::new(WspdNormalSerial::new(out)));
-    computeWspdSerial(tree, &2., wg.clone());
+    compute_wspd_serial(tree, &2., wg.clone());
     return wg.lock().unwrap().get_res();
 }
 //--------------------------------------------------------------------------------
@@ -232,9 +233,9 @@ where
     T: WspdFilter + std::marker::Sync + std::marker::Send + Clone,
 {
     if tree.size() < 2000 {
-        computeWspdSerial(tree, s, f.clone());
+        compute_wspd_serial(tree, s, f.clone());
     }
-    if !(tree.is_leaf()) && true {
+    if !(tree.is_leaf()) && f.lock().unwrap().start(tree) {
         rayon::join(
             || {
                 if let Some(ref left_node) = tree.left_node {
@@ -289,17 +290,16 @@ pub fn geometrically_separated(left: &KDTree, right: &KDTree, s: f64) -> bool {
     for d in 0..dimension {
         let left_tmp_diff = left.get_max(d) - left.get_min(d);
         let right_tmp_diff = right.get_max(d) - right.get_min(d);
-        let left_tmp_avg = (left.get_max(d) + left.get_min(d)).powi(2);
-        let right_tmp_avg = (right.get_max(d) - right.get_min(d)).powi(2);
+        let left_tmp_avg = (left.get_max(d) + left.get_min(d)) / 2.;
+        let right_tmp_avg = (right.get_max(d) + right.get_min(d)) / 2.;
         circle_distance += (left_tmp_avg - right_tmp_avg).powi(2);
         left_circle_diam += left_tmp_diff.powi(2);
-        right_circle_diam += right_tmp_diff.powi(2)
+        right_circle_diam += right_tmp_diff.powi(2);
     }
-    let left_circle_diam = Wrapper(left_circle_diam.sqrt());
-    let right_circle_diam = Wrapper(right_circle_diam.sqrt());
-    let my_radius: f64 = max(left_circle_diam, right_circle_diam).0 / 2.0;
-    let circle_distance =
-        circle_distance.sqrt() - left_circle_diam.0 / 2.0 - right_circle_diam.0 / 2.0;
+    let left_circle_diam = left_circle_diam.sqrt();
+    let right_circle_diam = right_circle_diam.sqrt();
+    let my_radius: f64 = f64::max(left_circle_diam, right_circle_diam) / 2.0;
+    let circle_distance = circle_distance.sqrt() - left_circle_diam / 2.0 - right_circle_diam / 2.0;
 
     circle_distance >= (s * my_radius)
 }
@@ -321,16 +321,14 @@ mod tests {
         let mut point_set: Vec<Point> = sample_points();
 
         let kdtree = KDTree::build(&mut point_set);
-        //println!("{:?}", kdtree);
         println!("====================");
 
         let mut core_dist: Vec<f64> = point_set_cd(&point_set, &kdtree, min_pts);
-        let wsp_pairs = wspd_serial(&kdtree, 2.);
+        let wsp_pairs = wspd_parallel(&kdtree, 2.);
 
-        //println!("{core_dist:?}");
-        let check = well_separated(&kdtree.left_node.unwrap(), &kdtree.right_node.unwrap(), 2.);
+        let check =
+            geometrically_separated(&kdtree.left_node.unwrap(), &kdtree.right_node.unwrap(), 2.);
 
-        println!("{check}");
-        println!("{wsp_pairs:?}");
+        println!("{:#?}", wsp_pairs.len());
     }
 }

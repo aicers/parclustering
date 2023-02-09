@@ -43,8 +43,11 @@ pub fn bcp_helper<'a>(
     if left.is_leaf() && right.is_leaf() {
         for i in 0..left.size() {
             for j in 0..right.size() {
-                
-                r.update(left.points[i].clone(), right.points[j].clone(), left.points[i].distance(&right.points[j]));
+                r.update(
+                    left.points[i].clone(),
+                    right.points[j].clone(),
+                    left.points[i].distance(&right.points[j]),
+                );
             }
         }
     } else {

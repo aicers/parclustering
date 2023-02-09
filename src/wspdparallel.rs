@@ -24,10 +24,10 @@ pub trait WspdFilter {
 }
 
 pub fn well_separated(left: &KDTree, right: &KDTree, s: f64) -> bool {
-    unreachable(left, right)
+    unreachable(left, right, s)
 }
 
-pub fn unreachable(left: &KDTree, right: &KDTree) -> bool {
+pub fn unreachable(left: &KDTree, right: &KDTree, s: f64) -> bool {
     let mut left_circle_diam: f64 = 0.0;
     let mut right_circle_diam: f64 = 0.0;
     let mut circle_distance: f64 = 0.0;
@@ -35,23 +35,23 @@ pub fn unreachable(left: &KDTree, right: &KDTree) -> bool {
     for d in 0..dimension {
         let left_tmp_diff = left.get_max(d) - left.get_min(d);
         let right_tmp_diff = right.get_max(d) - right.get_min(d);
-        let left_tmp_avg = (left.get_max(d) + left.get_min(d)).powi(2);
-        let right_tmp_avg = (right.get_max(d) - right.get_min(d)).powi(2);
+        let left_tmp_avg = (left.get_max(d) + left.get_min(d)) / 2.;
+        let right_tmp_avg = (right.get_max(d) + right.get_min(d)) / 2.;
         circle_distance += (left_tmp_avg - right_tmp_avg).powi(2);
         left_circle_diam += left_tmp_diff.powi(2);
-        right_circle_diam += right_tmp_diff.powi(2)
+        right_circle_diam += right_tmp_diff.powi(2);
     }
-    let left_circle_diam = Wrapper(left_circle_diam.sqrt());
-    let right_circle_diam = Wrapper(right_circle_diam.sqrt());
+    let left_circle_diam = left_circle_diam.sqrt();
+    let right_circle_diam = right_circle_diam.sqrt();
 
-    let my_radius: f64 = max(left_circle_diam, right_circle_diam).0 / 2.0;
+    let my_radius: f64 = f64::max(left_circle_diam, right_circle_diam) / 2.0;
     let mut my_diam = f64::max(2.0 * my_radius, left.cd_max);
     my_diam = f64::max(my_diam, right.cd_max);
 
     let mut circle_distance =
-        circle_distance.sqrt() - left_circle_diam.0 / 2.0 - right_circle_diam.0 / 2.0;
+        circle_distance.sqrt() - left_circle_diam / 2.0 - right_circle_diam / 2.0;
 
-    let geom_separated = circle_distance >= (2.0 * my_radius);
+    let geom_separated = circle_distance >= (s * my_radius);
     circle_distance = f64::max(circle_distance, left.cd_min);
     circle_distance = f64::max(circle_distance, right.cd_min);
 
@@ -70,10 +70,10 @@ pub struct RhoUpdateParallel<'a> {
 
 impl<'a> WspdFilter for RhoUpdateParallel<'a> {
     fn run(&mut self, left: &KDTree, right: &KDTree) {
-        let mut my_dist = f64::max(node_distance(&left, &right), left.cd_min);
-        my_dist = f64::max(my_dist, right.cd_min);
-        let temp = Arc::from(Mutex::from(f64::min(*self.rho.lock().unwrap(), my_dist)));
-        self.rho = temp;
+        let my_dist = f64::max(node_distance(&left, &right), left.cd_min);
+        let my_dist = f64::max(my_dist, right.cd_min);
+        let temp = f64::min(*self.rho.lock().unwrap(), my_dist);
+        self.rho = Arc::new(Mutex::new(temp));
     }
 
     fn move_on(&mut self, left: &KDTree, right: &KDTree) -> bool {
@@ -95,7 +95,7 @@ impl<'a> WspdFilter for RhoUpdateParallel<'a> {
     }
 
     fn well_separated(&mut self, left: &KDTree, right: &KDTree) -> bool {
-        return unreachable(left, right);
+        return unreachable(left, right, 2.);
     }
 
     fn start(&mut self, left: &KDTree) -> bool {
@@ -110,7 +110,7 @@ impl<'a> WspdFilter for RhoUpdateParallel<'a> {
 impl<'a> RhoUpdateParallel<'a> {
     fn new(beta: &'a f64, tree: &'a KDTree) -> Self {
         Self {
-            rho: Arc::from(Mutex::from(0.)),
+            rho: Arc::from(Mutex::from(std::f64::MAX)),
             beta,
             tree,
         }
@@ -178,7 +178,7 @@ impl<'a, 'b> WspdFilter for WspdGetParallel<'a, 'b> {
     }
 
     fn well_separated(&mut self, left: &KDTree, right: &KDTree) -> bool {
-        return unreachable(left, right);
+        return unreachable(left, right, 2.);
     }
 }
 
@@ -210,16 +210,17 @@ impl<'a: 'b, 'b> WspdGetParallel<'a, 'b> {
 pub fn filter_wspd_paraller<'a, 'b: 'a, 'c: 'a>(
     beta: &'b f64,
     rho_lo: &'b f64,
-    _rho_hi: f64,
+    rho_hi: f64,
     tree: &'a KDTree,
     core_dist: &'c Vec<f64>,
     point_set: &'c Vec<Point>,
 ) -> Vec<Bcp> {
     let mut my_rho = Arc::new(Mutex::new(RhoUpdateParallel::new(beta, tree)));
 
-    compute_wspd_parallel(tree.left_node.as_ref().unwrap(), &2., my_rho.clone());
+    compute_wspd_parallel(tree, &2., my_rho.clone());
     let rho_hi = my_rho.lock().unwrap().get_rho();
     let buffer: Vec<Bcp> = Vec::new();
+    eprintln!("{:?}", my_rho.lock().unwrap().get_rho());
     let mut my_splitter = Arc::new(Mutex::new(WspdGetParallel::new(
         beta, rho_lo, rho_hi, tree, buffer, core_dist, point_set,
     )));
@@ -235,7 +236,7 @@ mod tests {
 
     use crate::{
         node_cd::{node_cd, point_set_cd},
-        sample_points::sample_points,
+        sample_points::{n_random_points, sample_points},
     };
 
     use super::*;
@@ -246,14 +247,15 @@ mod tests {
         let mut point_set = sample_points();
         let mut kdtree = KDTree::build(&mut point_set);
         let mut core_dist: Vec<f64> = point_set_cd(&point_set, &kdtree, 3);
-        let mut beta = 2.;
+        let mut beta = 4.;
         let mut rho_lo = 0.;
-        let mut rho_hi = f64::MIN;
+        let mut rho_hi = f64::MAX;
         let cd_min = f64::MAX;
         let cd_max = f64::MIN;
         node_cd(&mut kdtree, &point_set, &core_dist, cd_min, cd_max);
-        let bccps = filter_wspd_paraller(&4., &rho_lo, rho_hi, &kdtree, &core_dist, &point_set);
+        let bccps = filter_wspd_paraller(&beta, &rho_lo, rho_hi, &kdtree, &core_dist, &point_set);
 
-        eprintln!("{bccps:?}");
+        //eprintln!("{bccps:?}");
+        println!("{:?}", bccps.len());
     }
 }

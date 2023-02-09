@@ -18,7 +18,7 @@ pub struct WEdge {
 }
 
 impl WEdge {
-    fn new(u: usize, v: usize, weight: f64) -> Self {
+    pub fn new(u: usize, v: usize, weight: f64) -> Self {
         Self { u, v, weight }
     }
 }
@@ -88,7 +88,7 @@ mod tests {
     fn hdbscan_test() {
         std::env::set_var("RUST_BACKTRACE", "full");
         let mut point_set = sample_points();
-        let mut min_pts = 5;
+        let mut min_pts = 3;
 
         let hdbscan = hdbscan(point_set, min_pts);
 
