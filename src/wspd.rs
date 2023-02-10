@@ -90,7 +90,7 @@ where
     }
 }
 
-fn compute_wspd_serial<'a, T>(tree: &'a KDTree, s: &'a f64, f: Arc<Mutex<T>>)
+pub fn compute_wspd_serial<'a, T>(tree: &'a KDTree, s: &'a f64, f: Arc<Mutex<T>>)
 where
     T: WspdFilter,
 {

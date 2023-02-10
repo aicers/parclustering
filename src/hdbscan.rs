@@ -22,57 +22,50 @@ impl WEdge {
         Self { u, v, weight }
     }
 }
-pub fn hdbscan(points: Vec<Point>, min_pts: usize) -> Vec<WeightedEdge> {
+pub fn hdbscan(points: &mut Vec<Point>, min_pts: usize) -> Vec<WeightedEdge> {
     let min_pts = min_pts;
 
-    let mut random_points = sample_points();
-
     //Creating KD-Tree with above generated random points
-    let mut kdtree = KDTree::build(&mut random_points);
+    let mut kdtree = KDTree::build(points);
 
     //Storing all the core distances of points in one set
-    let mut core_dist: Vec<f64> = point_set_cd(&random_points, &kdtree, min_pts);
-    //println!("{:?}", core_dist);
+    let mut core_dist: Vec<f64> = point_set_cd(&points, &kdtree, min_pts);
 
     let mut _cd_min = f64::MAX;
     let mut _cd_max = f64::MIN;
 
-    node_cd(&mut kdtree, &random_points, &core_dist, _cd_min, _cd_max);
+    node_cd(&mut kdtree, &points, &core_dist, _cd_min, _cd_max);
     let mut beta = 2.;
     let mut rho_lo = 0.;
     let mut rho_hi = f64::MIN;
     let mut num_edges: usize = 0;
 
-    let mut uf = Arc::new(Mutex::new(EdgeUnionFind::new(random_points.len())));
-
-    while uf.lock().unwrap().num_edge() < random_points.len() - 1 {
+    let mut uf = Arc::new(Mutex::new(EdgeUnionFind::new(points.len())));
+    println!("{:?}",uf);
+    while uf.lock().unwrap().num_edge() < points.len() - 1 {
         let bccps =
-            filter_wspd_paraller(&beta, &rho_lo, rho_hi, &kdtree, &core_dist, &random_points);
-        //println!("{bccps:?}");
+            filter_wspd_paraller(&beta, &rho_lo, rho_hi, &kdtree, &core_dist, &points);
         num_edges += bccps.len();
-
-        //println!("{uf:?}");
-        println!("{num_edges}");
-        println!("{rho_hi:?}");
-
+        println!("{:?}",uf.lock().unwrap().get_edge().len());
         if bccps.len() <= 0 {
             beta *= 2.;
             rho_lo = rho_hi;
         }
-
+        println!("Next");
+        println!("{:?}",uf);
         let mut edges: Vec<WEdge> = bccps
             .iter()
             .map(|bcp| {
                 WEdge::new(
-                    random_points.iter().position(|x| *x == bcp.u).unwrap(),
-                    random_points.iter().position(|x| *x == bcp.v).unwrap(),
+                    points.iter().position(|x| *x == bcp.u).unwrap(),
+                    points.iter().position(|x| *x == bcp.v).unwrap(),
                     bcp.dist,
                 )
             })
             .collect();
 
-        batch_kruskal(&mut edges, random_points.len(), &mut uf);
-        mark(&mut kdtree, &mut uf, &random_points);
+        batch_kruskal(&mut edges, points.len(), &mut uf);
+        mark(&mut kdtree, &mut uf, &points);
         beta *= 2.;
         rho_lo = rho_hi;
     }
@@ -90,8 +83,8 @@ mod tests {
         let mut point_set = sample_points();
         let mut min_pts = 3;
 
-        let hdbscan = hdbscan(point_set, min_pts);
+        let hdbscan = hdbscan(&mut point_set, min_pts);
 
-        println!("{hdbscan:?}");
+        println!("HDBSCAN {hdbscan:?}");
     }
 }

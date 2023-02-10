@@ -67,11 +67,8 @@ pub fn speculative_for<T>(
 where
     T: ReservationFilter + std::marker::Send + std::marker::Sync,
 {
-    if max_tries < 0.0 {
-        let mut max_tries = 100. + 200. * granularity;
-    } else {
-        ()
-    }
+    
+    let mut max_tries = if max_tries <0.0 {100. + 200. * granularity} else {max_tries};
 
     let max_round_size: f64 = f64::max(4., (e - s) / granularity + 1.);
     let mut current_round_size: f64 = max_round_size / 4.;
@@ -79,20 +76,19 @@ where
     let mut i_hold: Vec<f64> = Vec::new();
     let mut state: Arc<Mutex<Vec<T>>> = Arc::new(Mutex::new(Vec::new()));
     let mut i: Arc<Mutex<Vec<f64>>> =
-        Arc::new(Mutex::new(Vec::with_capacity(max_round_size as usize)));
+        Arc::new(Mutex::new(vec![0.;max_round_size as usize]));
     let mut keep: Arc<Mutex<Vec<bool>>> =
-        Arc::new(Mutex::new(Vec::with_capacity(max_round_size as usize)));
+        Arc::new(Mutex::new(vec![false;max_round_size as usize]));
 
     let mut round: f64 = 0.;
     let mut number_done: f64 = s;
     let mut number_keep = 0;
     let mut total_processed: f64 = 0.;
-
-    while number_done < e {
-        round += 1.;
+    while number_done < e {        
         if round > max_tries {
             panic!("Speculative_for: too many iterations, increase MaxTries");
         }
+        round += 1.;
 
         let size: f64 = f64::min(current_round_size, e - number_done);
 
@@ -118,7 +114,6 @@ where
                 keep.lock().unwrap()[j] = step.lock().unwrap().reserve(i.lock().unwrap()[j]);
             });
         }
-
         if has_state {
             (0..size as usize).into_par_iter().for_each(|j| {
                 if keep.lock().unwrap()[j] {
@@ -151,5 +146,5 @@ where
             current_round_size = f64::min(current_round_size * 2., max_round_size);
         }
     }
-    return total_processed;
+    return total_processed;    
 }

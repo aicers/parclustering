@@ -228,7 +228,6 @@ mod tests {
 
         //Storing all the core distances of points in one set
         let mut core_dist: Vec<f64> = point_set_cd(&random_points, &kdtree, min_pts);
-        //println!("{:?}", core_dist);
 
         let mut _cd_min = f64::MAX;
         let mut _cd_max = f64::MIN;
@@ -255,6 +254,6 @@ mod tests {
             .collect();
         let set = batch_kruskal(&mut e, random_points.len(), &mut uf);
 
-        println!("{:?}",set);
+        println!("Kruskal {:?}", set);
     }
 }
