@@ -5,9 +5,9 @@ use crate::sample_points::sample_points;
 pub fn node_cd(
     node: &mut KDTree,
     point_set: &Vec<Point>,
-    core_dist: &Vec<f64>,
-    cd_min: f64,
-    cd_max: f64,
+    core_dist: &Vec<f32>,
+    cd_min: f32,
+    cd_max: f32,
 ) {
     if node.is_leaf() {
         /*for elem in &node.points {
@@ -79,8 +79,8 @@ pub fn node_cd(
     }
 }
 
-pub fn point_set_cd(point_set: &Vec<Point>, kdtree: &KDTree, min_pts: usize) -> Vec<f64> {
-    let mut core_dist: Vec<f64> = std::iter::repeat(0.).take(point_set.len()).collect();
+pub fn point_set_cd(point_set: &Vec<Point>, kdtree: &KDTree, min_pts: usize) -> Vec<f32> {
+    let mut core_dist: Vec<f32> = std::iter::repeat(0.).take(point_set.len()).collect();
     for (i, elem) in point_set.iter().enumerate() {
         core_dist[i] = kdtree
             .nearest_neighbours(elem, min_pts)
@@ -103,8 +103,8 @@ mod tests {
         let min_pts = 3;
         let mut kdtree = KDTree::build(&mut point_set);
         let point_set_cd = point_set_cd(&point_set, &kdtree, min_pts);
-        let cd_min = f64::MAX;
-        let cd_max = f64::MIN;
+        let cd_min = f32::MAX;
+        let cd_max = f32::MIN;
         let node_cd = node_cd(&mut kdtree, &point_set, &point_set_cd, cd_min, cd_max);
         println!("{kdtree:?}");
     }

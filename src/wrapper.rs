@@ -2,7 +2,7 @@ use std::cmp::{Ord, Ordering};
 use std::ops::Neg;
 
 #[derive(Debug, Copy, Clone)]
-pub struct Wrapper(pub f64);
+pub struct Wrapper(pub f32);
 impl Ord for Wrapper {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.0 < other.0 {

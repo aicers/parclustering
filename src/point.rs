@@ -5,7 +5,7 @@ use std::{
 };
 #[derive(Debug, Clone)]
 pub struct Point {
-    pub coords: Vec<f64>,
+    pub coords: Vec<f32>,
 }
 
 impl Default for Point {
@@ -56,12 +56,12 @@ impl Deref for Point {
 }
 */
 impl Point {
-    pub fn distance(&self, other: &Point) -> f64 {
+    pub fn distance(&self, other: &Point) -> f32 {
         self.coords
             .iter()
             .zip(other.coords.iter())
             .map(|(&x1, &x2)| (x1 - x2).powf(2.))
-            .sum::<f64>()
+            .sum::<f32>()
             .sqrt()
     }
 }

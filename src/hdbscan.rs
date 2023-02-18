@@ -14,11 +14,11 @@ use crate::wspdparallel::filter_wspd_paraller;
 pub struct WEdge {
     pub u: usize,
     pub v: usize,
-    pub weight: f64,
+    pub weight: f32,
 }
 
 impl WEdge {
-    pub fn new(u: usize, v: usize, weight: f64) -> Self {
+    pub fn new(u: usize, v: usize, weight: f32) -> Self {
         Self { u, v, weight }
     }
 }
@@ -29,30 +29,29 @@ pub fn hdbscan(points: &mut Vec<Point>, min_pts: usize) -> Vec<WeightedEdge> {
     let mut kdtree = KDTree::build(points);
 
     //Storing all the core distances of points in one set
-    let mut core_dist: Vec<f64> = point_set_cd(&points, &kdtree, min_pts);
+    let mut core_dist: Vec<f32> = point_set_cd(&points, &kdtree, min_pts);
 
-    let mut _cd_min = f64::MAX;
-    let mut _cd_max = f64::MIN;
+    let mut _cd_min = f32::MAX;
+    let mut _cd_max = f32::MIN;
 
     node_cd(&mut kdtree, &points, &core_dist, _cd_min, _cd_max);
-    let mut beta = 2.;
-    let mut rho_lo = 0.;
-    let mut rho_hi = f64::MIN;
+    let mut beta:i64 = 2;
+    let mut rho_lo = -1.;
+
     let mut num_edges: usize = 0;
 
     let mut uf = Arc::new(Mutex::new(EdgeUnionFind::new(points.len())));
-    println!("{:?}",uf);
+    let mut i = 0;
+
     while uf.lock().unwrap().num_edge() < points.len() - 1 {
-        let bccps =
-            filter_wspd_paraller(&beta, &rho_lo, rho_hi, &kdtree, &core_dist, &points);
+        let mut rho_hi = f32::MIN;
+        let bccps = filter_wspd_paraller(&beta, &rho_lo, &mut rho_hi, &kdtree, &core_dist, &points);
         num_edges += bccps.len();
-        println!("{:?}",uf.lock().unwrap().get_edge().len());
+
         if bccps.len() <= 0 {
-            beta *= 2.;
+            beta *= 2;
             rho_lo = rho_hi;
         }
-        println!("Next");
-        println!("{:?}",uf);
         let mut edges: Vec<WEdge> = bccps
             .iter()
             .map(|bcp| {
@@ -63,10 +62,18 @@ pub fn hdbscan(points: &mut Vec<Point>, min_pts: usize) -> Vec<WeightedEdge> {
                 )
             })
             .collect();
-
+        println!("Edges {}", edges.len());
         batch_kruskal(&mut edges, points.len(), &mut uf);
         mark(&mut kdtree, &mut uf, &points);
-        beta *= 2.;
+        println!("=================");
+        println!("Edges {}", num_edges);
+        println!("MST Edges {:?}", uf.lock().unwrap().get_edge().len());
+        println!("Rho Lo {}", rho_lo);
+        println!("Rho Hi {}", rho_hi);
+        println!("Beta {}", beta);
+        //println!("UF {:?}", uf.lock().unwrap());
+        println!("=================");
+        beta *= 2;
         rho_lo = rho_hi;
     }
     let x = uf.lock().unwrap().get_edge();
@@ -75,7 +82,7 @@ pub fn hdbscan(points: &mut Vec<Point>, min_pts: usize) -> Vec<WeightedEdge> {
 
 mod tests {
     use super::{hdbscan, *};
-    use crate::sample_points::sample_points;
+    use crate::{dendrogram::dendrogram, sample_points::sample_points};
 
     #[test]
     fn hdbscan_test() {
@@ -85,6 +92,9 @@ mod tests {
 
         let hdbscan = hdbscan(&mut point_set, min_pts);
 
-        println!("HDBSCAN {hdbscan:?}");
+        println!("HDBSCAN {:?}", hdbscan.len());
+        let num = point_set.len();
+        let dend = dendrogram(hdbscan, num);
+        println!("Dendrogram {:?}",dend.len());
     }
 }

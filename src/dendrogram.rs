@@ -8,7 +8,7 @@ use crate::wrapper::Wrapper;
 pub struct DendroNode {
     left: usize,
     right: usize,
-    weight: f64,
+    weight: f32,
     size: usize,
 }
 
@@ -23,7 +23,7 @@ impl Default for DendroNode {
     }
 }
 impl DendroNode {
-    pub fn new(left: usize, right: usize, weight: f64, size: usize) -> Self {
+    pub fn new(left: usize, right: usize, weight: f32, size: usize) -> Self {
         Self {
             left,
             right,

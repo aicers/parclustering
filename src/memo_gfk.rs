@@ -9,24 +9,24 @@ use std::cmp::Ordering;
 use std::sync::{Arc, Mutex};
 
 pub trait ReservationFilter {
-    fn reserve(&mut self, i: f64) -> bool {
+    fn reserve(&mut self, i: i64) -> bool {
         true
     }
-    fn commit(&mut self, i: f64) -> bool {
+    fn commit(&mut self, i: i64) -> bool {
         true
     }
 }
 
 #[derive(Debug, Clone)]
 struct IndexedEdge {
-    u: f64,
-    v: f64,
-    id: f64,
-    weight: f64,
+    u: i64,
+    v: i64,
+    id: i64,
+    weight: f32,
 }
 
 impl IndexedEdge {
-    fn new(u: f64, v: f64, id: f64, weight: f64) -> Self {
+    fn new(u: i64, v: i64, id: i64, weight: f32) -> Self {
         Self { u, v, id, weight }
     }
 }
@@ -40,7 +40,7 @@ struct UnionFindStep<'a> {
 }
 
 impl<'a> ReservationFilter for UnionFindStep<'a> {
-    fn reserve(&mut self, i: f64) -> bool {
+    fn reserve(&mut self, i: i64) -> bool {
         self.e[i as usize].u = self.uf.find(self.e[i as usize].u);
         let u = self.e[i as usize].u;
         self.e[i as usize].v = self.uf.find(self.e[i as usize].v);
@@ -55,7 +55,7 @@ impl<'a> ReservationFilter for UnionFindStep<'a> {
         }
     }
 
-    fn commit(&mut self, i: f64) -> bool {
+    fn commit(&mut self, i: i64) -> bool {
         let u = self.e[i as usize].u;
         let v = self.e[i as usize].v;
 
@@ -89,10 +89,10 @@ struct EdgeUnionFindStep<'a> {
     e: &'a mut Vec<IndexedEdge>,
     r: &'a mut Vec<Reservation>,
     e_real: Vec<IndexedEdge>,
-    uf: &'a mut Arc<Mutex<EdgeUnionFind>>,
+    uf: Arc<Mutex<EdgeUnionFind>>,
 }
 impl<'a> ReservationFilter for EdgeUnionFindStep<'a> {
-    fn reserve(&mut self, i: f64) -> bool {
+    fn reserve(&mut self, i: i64) -> bool {
         self.e[i as usize].u = self.uf.lock().unwrap().find(self.e[i as usize].u);
         let u = self.e[i as usize].u;
         self.e[i as usize].v = self.uf.lock().unwrap().find(self.e[i as usize].v);
@@ -107,7 +107,7 @@ impl<'a> ReservationFilter for EdgeUnionFindStep<'a> {
         }
     }
 
-    fn commit(&mut self, i: f64) -> bool {
+    fn commit(&mut self, i: i64) -> bool {
         let u = self.e[i as usize].u;
         let v = self.e[i as usize].v;
         let u_real = self.e_real[i as usize].u;
@@ -135,26 +135,26 @@ impl<'a> EdgeUnionFindStep<'a> {
     fn new(
         e: &'a mut Vec<IndexedEdge>,
         r: &'a mut Vec<Reservation>,
-        uf: &'a mut Arc<Mutex<EdgeUnionFind>>,
+        uf: Arc<Mutex<EdgeUnionFind>>,
     ) -> Self {
         let mut e_real = e.clone();
         Self { e, r, e_real, uf }
     }
 }
 
-pub fn kruskal(e: &mut Vec<WEdge>, n: usize) -> Vec<f64> {
+pub fn kruskal(e: &mut Vec<WEdge>, n: usize) -> Vec<i64> {
     let m = e.len();
     let k = std::cmp::min((5 * n) / 4, m);
 
     let mut iw: Vec<IndexedEdge> = (0..m)
-        .map(|i| IndexedEdge::new(e[i].u as f64, e[i].v as f64, i as f64, e[i].weight))
+        .map(|i| IndexedEdge::new(e[i].u as i64, e[i].v as i64, i as i64, e[i].weight))
         .collect();
 
     iw.sort_by(|a, b| {
         if a.weight < b.weight {
             Ordering::Less
         } else if a.weight == b.weight {
-            Wrapper(a.id).cmp(&Wrapper(b.id))
+            a.id.cmp(&b.id)
         } else {
             Ordering::Greater
         }
@@ -171,12 +171,12 @@ pub fn kruskal(e: &mut Vec<WEdge>, n: usize) -> Vec<f64> {
         &mut mst_flags,
     )));
 
-    speculative_for(&mut uf_step, 0., iw_size as f64, 20., false, -1.);
+    speculative_for(&mut uf_step, 0, iw_size as i64, 20, false, -1);
 
     let mst = mst_flags
         .iter()
         .enumerate()
-        .filter_map(|(i, &b)| if b { Some(i as f64) } else { None })
+        .filter_map(|(i, &b)| if b { Some(i as i64) } else { None })
         .collect();
 
     return mst;
@@ -185,26 +185,33 @@ pub fn kruskal(e: &mut Vec<WEdge>, n: usize) -> Vec<f64> {
 pub fn batch_kruskal(e: &mut Vec<WEdge>, n: usize, uf: &mut Arc<Mutex<EdgeUnionFind>>) {
     let m = e.len();
     let k = std::cmp::min((5 * n) / 4, m);
-
+    println!("K Value {}",k);
     let mut iw: Vec<IndexedEdge> = (0..m)
-        .map(|i| IndexedEdge::new(e[i].u as f64, e[i].v as f64, i as f64, e[i].weight))
+        .map(|i| IndexedEdge::new(e[i].u as i64, e[i].v as i64, i as i64, e[i].weight))
         .collect();
 
-    iw.sort_by(|a, b| {
+    let edge_less = |a:&IndexedEdge,b:&IndexedEdge| {
         if a.weight < b.weight {
-            Ordering::Less
-        } else if a.weight == b.weight {
-            Wrapper(a.id).cmp(&Wrapper(b.id))
+            std::cmp::Ordering::Less
+        } else if a.weight > b.weight{
+            std::cmp::Ordering::Greater
         } else {
-            Ordering::Greater
+            a.id.cmp(&b.id)
         }
-    });
+    };
+    iw.sort_by(edge_less);
+
+    println!("IW Len {:?}",iw.len());
 
     let mut r = vec![Reservation::default(); n];
+    println!("Reservation list len {}",r.len());
     let iw_size = iw.len();
-    let mut uf_step: Arc<Mutex<EdgeUnionFindStep>> =
-        Arc::new(Mutex::new(EdgeUnionFindStep::new(&mut iw, &mut r, uf)));
-    speculative_for(&uf_step, 0., iw_size as f64, 20., false, -1.);
+    let mut uf_step: Arc<Mutex<EdgeUnionFindStep>> = Arc::new(Mutex::new(EdgeUnionFindStep::new(
+        &mut iw,
+        &mut r,
+        uf.clone(),
+    )));
+    speculative_for(&uf_step, 0, iw_size as i64, 20, false, -1);
 }
 
 #[cfg(test)]
@@ -227,20 +234,26 @@ mod tests {
         let mut kdtree = KDTree::build(&mut random_points);
 
         //Storing all the core distances of points in one set
-        let mut core_dist: Vec<f64> = point_set_cd(&random_points, &kdtree, min_pts);
+        let mut core_dist: Vec<f32> = point_set_cd(&random_points, &kdtree, min_pts);
 
-        let mut _cd_min = f64::MAX;
-        let mut _cd_max = f64::MIN;
+        let mut _cd_min = f32::MAX;
+        let mut _cd_max = f32::MIN;
 
         node_cd(&mut kdtree, &random_points, &core_dist, _cd_min, _cd_max);
-        let mut beta = 2.;
+        let mut beta = 4;
         let mut rho_lo = 0.;
-        let mut rho_hi = f64::MIN;
+        let mut rho_hi = f32::MIN;
         let mut num_edges: usize = 0;
 
         let mut uf = Arc::new(Mutex::new(EdgeUnionFind::new(random_points.len())));
-        let bccps =
-            filter_wspd_paraller(&beta, &rho_lo, rho_hi, &kdtree, &core_dist, &random_points);
+        let bccps = filter_wspd_paraller(
+            &beta,
+            &rho_lo,
+            &mut rho_hi,
+            &kdtree,
+            &core_dist,
+            &random_points,
+        );
 
         let mut e: Vec<WEdge> = bccps
             .iter()
@@ -252,8 +265,6 @@ mod tests {
                 )
             })
             .collect();
-        let set = batch_kruskal(&mut e, random_points.len(), &mut uf);
-
-        println!("Kruskal {:?}", set);
+        batch_kruskal(&mut e, random_points.len(), &mut uf);
     }
 }

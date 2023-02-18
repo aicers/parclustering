@@ -9,7 +9,7 @@ pub fn retrive_points(path: &str) -> Result<Vec<Point>, csv::Error> {
         result_vec.push(Point {
             coords: result
                 .iter()
-                .flat_map(|i| i.iter().map(|j| j.parse::<f64>().unwrap()))
+                .flat_map(|i| i.iter().map(|j| j.parse::<f32>().unwrap()))
                 .collect(),
         });
     }

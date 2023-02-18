@@ -59,7 +59,7 @@ impl WspdNormalSerial {
     }
 }
 
-fn find_wsp_serial<'a, T>(left: &'a KDTree, right: &'a KDTree, _s: f64, f: Arc<Mutex<T>>)
+fn find_wsp_serial<'a, T>(left: &'a KDTree, right: &'a KDTree, _s: f32, f: Arc<Mutex<T>>)
 where
     T: WspdFilter,
 {
@@ -90,7 +90,7 @@ where
     }
 }
 
-pub fn compute_wspd_serial<'a, T>(tree: &'a KDTree, s: &'a f64, f: Arc<Mutex<T>>)
+pub fn compute_wspd_serial<'a, T>(tree: &'a KDTree, s: &'a f32, f: Arc<Mutex<T>>)
 where
     T: WspdFilter,
 {
@@ -101,25 +101,15 @@ where
         if let Some(ref right_node) = tree.right_node {
             compute_wspd_serial(right_node.as_ref(), s, f.clone());
         }
-        let empty = KDTree::empty();
-        find_wsp_serial(
-            if let Some(ref left_node) = tree.left_node {
-                left_node.as_ref()
-            } else {
-                &empty
-            },
-            if let Some(ref right_node) = tree.right_node {
-                right_node.as_ref()
-            } else {
-                &empty
-            },
-            2.,
-            f.clone(),
-        );
+        if let (Some(ref left), Some(ref right)) =
+            (tree.left_node.as_ref(), tree.right_node.as_ref())
+        {
+            find_wsp_serial(left, right, 2., f.clone());
+        }
     }
 }
 
-pub fn wspd_serial(tree: &KDTree, _s: f64) -> Vec<Wsp> {
+pub fn wspd_serial(tree: &KDTree, _s: f32) -> Vec<Wsp> {
     let out = Vec::new();
     let mut wg = Arc::new(Mutex::new(WspdNormalSerial::new(out)));
     compute_wspd_serial(tree, &2., wg.clone());
@@ -161,27 +151,27 @@ impl WspdNormalParallel {
     }
 }
 
-pub fn find_wsp_parallel<'a, T>(left: &'a KDTree, right: &'a KDTree, s: f64, f: Arc<Mutex<T>>)
+pub fn find_wsp_parallel<'a, T>(left: &'a KDTree, right: &'a KDTree, s: f32, f: Arc<Mutex<T>>)
 where
     T: WspdFilter + std::marker::Sync + std::marker::Send,
 {
     if left.size() + right.size() < 2000 {
-        find_wsp_serial(left, right, 2., f);
+        find_wsp_serial(left, right, s, f);
     } else {
-        if well_separated(left, right, 2.0) {
+        if well_separated(left, right, s) {
             f.lock().unwrap().run(left, right);
         } else {
             if left.is_leaf() && right.is_leaf() {
                 panic!("Leaves not well separated")
             } else if left.is_leaf() {
                 rayon::join(
-                    || find_wsp_parallel(&right.left_node.as_ref().unwrap(), left, 2.0, f.clone()),
-                    || find_wsp_parallel(&right.right_node.as_ref().unwrap(), left, 2.0, f.clone()),
+                    || find_wsp_parallel(&right.left_node.as_ref().unwrap(), left, s, f.clone()),
+                    || find_wsp_parallel(&right.right_node.as_ref().unwrap(), left, s, f.clone()),
                 );
             } else if right.is_leaf() {
                 rayon::join(
-                    || find_wsp_parallel(&left.left_node.as_ref().unwrap(), right, 2.0, f.clone()),
-                    || find_wsp_parallel(&left.right_node.as_ref().unwrap(), right, 2.0, f.clone()),
+                    || find_wsp_parallel(&left.left_node.as_ref().unwrap(), right, s, f.clone()),
+                    || find_wsp_parallel(&left.right_node.as_ref().unwrap(), right, s, f.clone()),
                 );
             } else {
                 if left.l_max() > right.l_max() {
@@ -190,7 +180,7 @@ where
                             find_wsp_parallel(
                                 &left.left_node.as_ref().unwrap(),
                                 right,
-                                2.0,
+                                s,
                                 f.clone(),
                             )
                         },
@@ -198,7 +188,7 @@ where
                             find_wsp_parallel(
                                 &left.right_node.as_ref().unwrap(),
                                 right,
-                                2.0,
+                                s,
                                 f.clone(),
                             )
                         },
@@ -209,7 +199,7 @@ where
                             find_wsp_parallel(
                                 &right.left_node.as_ref().unwrap(),
                                 left,
-                                2.0,
+                                s,
                                 f.clone(),
                             )
                         },
@@ -217,7 +207,7 @@ where
                             find_wsp_parallel(
                                 &right.right_node.as_ref().unwrap(),
                                 left,
-                                2.0,
+                                s,
                                 f.clone(),
                             )
                         },
@@ -228,7 +218,7 @@ where
     }
 }
 
-pub fn compute_wspd_parallel<'a, T>(tree: &'a KDTree, s: &'a f64, f: Arc<Mutex<T>>)
+pub fn compute_wspd_parallel<'a, T>(tree: &'a KDTree, s: &'a f32, f: Arc<Mutex<T>>)
 where
     T: WspdFilter + std::marker::Sync + std::marker::Send + Clone,
 {
@@ -248,28 +238,17 @@ where
                 }
             },
         );
-        let empty = KDTree::empty();
-        find_wsp_parallel(
-            if let Some(ref left_node) = tree.left_node {
-                left_node.as_ref()
-            } else {
-                &empty
-            },
-            if let Some(ref right_node) = tree.right_node {
-                right_node.as_ref()
-            } else {
-                &empty
-            },
-            2.0,
-            f.clone(),
-        );
+
+        if let (Some(ref left), Some(ref right)) =
+            (tree.left_node.as_ref(), tree.right_node.as_ref())
+        {
+            find_wsp_parallel(left, right, *s, f.clone());
+        }
     }
 }
 
-pub fn wspd_parallel(tree: &KDTree, _s: f64) -> Vec<Wsp> {
-    let mut wg = Arc::new(Mutex::new(WspdNormalParallel::new(Vec::with_capacity(
-        tree.size(),
-    ))));
+pub fn wspd_parallel(tree: &KDTree, _s: f32) -> Vec<Wsp> {
+    let mut wg = Arc::new(Mutex::new(WspdNormalParallel::new(Vec::new())));
     compute_wspd_parallel(tree, &_s, wg.clone());
     let res = wg.lock().unwrap().get_res();
     res
@@ -278,14 +257,14 @@ pub fn wspd_parallel(tree: &KDTree, _s: f64) -> Vec<Wsp> {
 //Checking Node pairs for "Geometrically Separated" condition
 //--------------------------------------------------------------------------------
 
-pub fn well_separated(left: &KDTree, right: &KDTree, s: f64) -> bool {
+pub fn well_separated(left: &KDTree, right: &KDTree, s: f32) -> bool {
     geometrically_separated(left, right, s)
 }
 
-pub fn geometrically_separated(left: &KDTree, right: &KDTree, s: f64) -> bool {
-    let mut left_circle_diam: f64 = 0.0;
-    let mut right_circle_diam: f64 = 0.0;
-    let mut circle_distance: f64 = 0.0;
+pub fn geometrically_separated(left: &KDTree, right: &KDTree, s: f32) -> bool {
+    let mut left_circle_diam: f32 = 0.0;
+    let mut right_circle_diam: f32 = 0.0;
+    let mut circle_distance: f32 = 0.0;
     let dimension = left.dim();
     for d in 0..dimension {
         let left_tmp_diff = left.get_max(d) - left.get_min(d);
@@ -298,7 +277,7 @@ pub fn geometrically_separated(left: &KDTree, right: &KDTree, s: f64) -> bool {
     }
     let left_circle_diam = left_circle_diam.sqrt();
     let right_circle_diam = right_circle_diam.sqrt();
-    let my_radius: f64 = f64::max(left_circle_diam, right_circle_diam) / 2.0;
+    let my_radius: f32 = f32::max(left_circle_diam, right_circle_diam) / 2.0;
     let circle_distance = circle_distance.sqrt() - left_circle_diam / 2.0 - right_circle_diam / 2.0;
 
     circle_distance >= (s * my_radius)
@@ -323,8 +302,8 @@ mod tests {
         let kdtree = KDTree::build(&mut point_set);
         println!("====================");
 
-        let mut core_dist: Vec<f64> = point_set_cd(&point_set, &kdtree, min_pts);
-        let wsp_pairs = wspd_parallel(&kdtree, 2.);
+        let mut core_dist: Vec<f32> = point_set_cd(&point_set, &kdtree, min_pts);
+        let wsp_pairs = wspd_serial(&kdtree, 2.);
 
         let check =
             geometrically_separated(&kdtree.left_node.unwrap(), &kdtree.right_node.unwrap(), 2.);

@@ -1,29 +1,33 @@
 use crate::memo_gfk::ReservationFilter;
 use atomic_float::AtomicF64;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use std::sync::{atomic::Ordering::Relaxed, Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicI64, Ordering::Relaxed},
+    Arc, Mutex,
+};
 
 #[derive(Debug, Clone)]
 pub struct Reservation {
-    r: Arc<AtomicF64>,
-    max_idx: f64,
+    r: Arc<AtomicI64>,
+    max_idx: i64,
 }
 impl Default for Reservation {
     fn default() -> Self {
         Self {
-            r: Arc::new(AtomicF64::new(std::f64::MAX)),
-            max_idx: std::f64::MAX,
+            r: Arc::new(AtomicI64::new(std::i64::MAX)),
+            max_idx: std::i64::MAX,
         }
     }
 }
 impl Reservation {
-    fn get(&self) -> f64 {
+    fn get(&self) -> i64 {
         self.r.load(Relaxed)
     }
 
-    pub fn reserve(&mut self, i: f64) -> bool {
-        if self.r.load(Relaxed) < i as f64 {
-            self.r.swap(i, Relaxed);
+    pub fn reserve(&mut self, i: i64) -> bool {
+        let temp = i64::min(self.r.load(Relaxed), i);
+        if self.r.load(Relaxed) > i {
+            self.r.swap(temp, Relaxed);
             true
         } else {
             false
@@ -39,14 +43,14 @@ impl Reservation {
     }
 
     pub fn freeze(&mut self) {
-        self.r.swap(-1.0, Relaxed);
+        self.r.swap(-1, Relaxed);
     }
 
-    pub fn check(&self, i: f64) -> bool {
+    pub fn check(&self, i: i64) -> bool {
         return self.r.load(Relaxed) == i;
     }
 
-    pub fn check_reset(&mut self, i: f64) -> bool {
+    pub fn check_reset(&mut self, i: i64) -> bool {
         if self.r.load(Relaxed) == i {
             self.r.swap(self.max_idx, Relaxed);
             return true;
@@ -58,58 +62,59 @@ impl Reservation {
 
 pub fn speculative_for<T>(
     step: &Arc<Mutex<T>>,
-    s: f64,
-    e: f64,
-    granularity: f64,
+    s: i64,
+    e: i64,
+    granularity: i64,
     has_state: bool,
-    max_tries: f64,
-) -> f64
+    max_tries: i64,
+) -> i64
 where
     T: ReservationFilter + std::marker::Send + std::marker::Sync,
 {
-    
-    let mut max_tries = if max_tries <0.0 {100. + 200. * granularity} else {max_tries};
+    let mut max_tries = if max_tries < 0 {
+        100 + 200 * granularity
+    } else {
+        max_tries
+    };
 
-    let max_round_size: f64 = f64::max(4., (e - s) / granularity + 1.);
-    let mut current_round_size: f64 = max_round_size / 4.;
+    let max_round_size: i64 = i64::max(4, ((e - s) / granularity) + 1);
+    let mut current_round_size: i64 = max_round_size / 4;
 
-    let mut i_hold: Vec<f64> = Vec::new();
-    let mut state: Arc<Mutex<Vec<T>>> = Arc::new(Mutex::new(Vec::new()));
-    let mut i: Arc<Mutex<Vec<f64>>> =
-        Arc::new(Mutex::new(vec![0.;max_round_size as usize]));
+    let mut i_hold: Vec<i64> = Vec::new();
+    let mut state = Arc::new(Mutex::new(Vec::<T>::new()));
+
+    let mut i: Arc<Mutex<Vec<i64>>> = Arc::new(Mutex::new(vec![0; max_round_size as usize]));
     let mut keep: Arc<Mutex<Vec<bool>>> =
-        Arc::new(Mutex::new(vec![false;max_round_size as usize]));
+        Arc::new(Mutex::new(vec![false; max_round_size as usize]));
 
-    let mut round: f64 = 0.;
-    let mut number_done: f64 = s;
+    let mut round: i64 = 0;
+    let mut number_done: i64 = s;
     let mut number_keep = 0;
-    let mut total_processed: f64 = 0.;
-    while number_done < e {        
+    let mut total_processed: i64 = 0;
+    while number_done < e {
+        round += 1;
         if round > max_tries {
             panic!("Speculative_for: too many iterations, increase MaxTries");
         }
-        round += 1.;
 
-        let size: f64 = f64::min(current_round_size, e - number_done);
-
+        let size: i64 = i64::min(current_round_size, e - number_done);
         total_processed += size;
         let loop_granularity: usize = 0;
-
         if has_state {
-            (0..s as usize).into_par_iter().for_each(|j| {
+            (0..size as usize).into_par_iter().for_each(|j| {
                 i.lock().unwrap()[j] = if j < number_keep {
                     i_hold[j]
                 } else {
-                    number_done + 1.
+                    number_done + j as i64
                 };
                 keep.lock().unwrap()[j] = state.lock().unwrap()[j].reserve(i.lock().unwrap()[j]);
             });
         } else {
-            (0..s as usize).into_par_iter().for_each(|j| {
-                i.lock().unwrap()[j] = if j < number_keep {
-                    i_hold[j]
+            (0..size as usize).into_par_iter().for_each(|j| {
+                if j < number_keep {
+                    i.lock().unwrap()[j] = i_hold[j]
                 } else {
-                    number_done + 1.
+                    i.lock().unwrap()[j] = number_done + j as i64
                 };
                 keep.lock().unwrap()[j] = step.lock().unwrap().reserve(i.lock().unwrap()[j]);
             });
@@ -128,23 +133,48 @@ where
                 }
             });
         }
-        let i_hold = &i.lock().unwrap()[0..size as usize]
+        i_hold = i.lock().unwrap()[0..size as usize]
+            .to_vec()
             .iter()
-            .zip(&keep.lock().unwrap()[0..size as usize])
+            .zip(&keep.lock().unwrap()[0..size as usize].to_vec())
             .filter(|(_, i)| **i)
             .map(|(j, _)| *j)
-            .collect::<Vec<f64>>();
+            .collect::<Vec<i64>>();
 
-        let number_keep: usize = i_hold.len();
-        number_done += size - number_keep as f64;
-        if (number_keep as f64 / size) > 0.2 {
-            current_round_size = f64::max(
-                current_round_size / 2.,
-                f64::max(max_round_size / 64.0 + 1., number_keep as f64),
+        number_keep = i_hold.len();
+        number_done += size - number_keep as i64;
+        if (number_keep as i64 / size) as f32 > 0.2 {
+            current_round_size = i64::max(
+                current_round_size / 2,
+                i64::max((max_round_size / 64) + 1, number_keep as i64),
             );
-        } else if (number_keep as f64 / size) < 0.1 {
-            current_round_size = f64::min(current_round_size * 2., max_round_size);
+        } else if ((number_keep as i64 / size) as f32) < 0.1 {
+            current_round_size = i64::min(current_round_size * 2, max_round_size);
         }
     }
-    return total_processed;    
+    return total_processed;
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::speculative_for::Reservation;
+
+    #[test]
+    pub fn speculative_test() {
+        let mut test = Reservation::default();
+        println!("Reservation {:?}", test);
+        println!(" Reservation Get {:?}", test.get());
+        println!(" Reservation Reserved {:?}", test.reserved());
+        println!(" Reservation Reserved {:?}", test.freeze());
+        println!("Reservation {:?}", test.check(-1));
+        println!("Reservation {:?}", test.check_reset(-1));
+        println!(" Reservation Reserved {:?}", test.freeze());
+        println!("Reservation {:?}", test.reset());
+        println!("Reservation {:?}", test);
+        println!(" Reservation Reserve {:?}", test.reserve(100));
+        println!(" Reservation Reserve {:?}", test.reserve(110));
+        println!(" Reservation Reserve {:?}", test.reserve(10));
+        println!(" Reservation Reserve {:?}", test);
+        println!(" Reservation Reserve {:?}", test.reserve(100));
+    }
 }

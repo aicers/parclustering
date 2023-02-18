@@ -7,7 +7,7 @@ use crate::wrapper::Wrapper;
 pub struct Bcp {
     pub u: Point,
     pub v: Point,
-    pub dist: f64,
+    pub dist: f32,
 }
 
 impl Bcp {
@@ -15,11 +15,11 @@ impl Bcp {
         Self {
             u: Point { coords: vec![0.] },
             v: Point { coords: vec![0.] },
-            dist: std::f64::MAX,
+            dist: std::f32::MAX,
         }
     }
 
-    pub fn update(&mut self, u: Point, v: Point, dist: f64) {
+    pub fn update(&mut self, u: Point, v: Point, dist: f32) {
         if dist < self.dist {
             self.u = u;
             self.v = v;
@@ -34,7 +34,7 @@ pub fn bcp_helper<'a>(
     left: &'a KDTree,
     right: &'a KDTree,
     r: &'a mut Bcp,
-    core_dist: &'a Vec<f64>,
+    core_dist: &'a Vec<f32>,
     point_set: &'a Vec<Point>,
 ) {
     if node_distance(left, right) > r.dist {
@@ -112,17 +112,17 @@ pub fn bcp_helper<'a>(
 pub fn brute_force_bcp<'a>(
     left: &'a KDTree,
     right: &'a KDTree,
-    core_dist: &'a Vec<f64>,
+    core_dist: &'a Vec<f32>,
     point_set: &'a Vec<Point>,
 ) -> Bcp {
     let mut r = Bcp::new();
     for i in 0..left.points.len() {
         for j in 0..right.points.len() {
-            let mut dist = f64::max(
+            let mut dist = f32::max(
                 (left.points[i]).distance(&right.points[j]),
                 core_dist[point_set.iter().position(|x| x == &left.points[i]).unwrap()],
             );
-            dist = f64::max(
+            dist = f32::max(
                 dist,
                 core_dist[point_set
                     .iter()

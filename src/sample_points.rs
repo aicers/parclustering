@@ -46,7 +46,12 @@ pub fn sample_points() -> Vec<Point> {
         vec![7.14247077585, 2.10709719255, -4.35807421238],
     ];
 
-    let result: Vec<Point> = points.iter().map(|i| Point { coords: i.clone() }).collect();
+    let result: Vec<Point> = points
+        .iter()
+        .map(|i| Point {
+            coords: i.iter().map(|i| *i as f32).collect(),
+        })
+        .collect();
     result
 }
 
@@ -62,7 +67,7 @@ pub fn n_random_points(n: usize, d: usize) -> Vec<Point> {
 
     //Generating random points for our dataset
     let mut make_random_point = || Point {
-        coords: (0..d).map(|_| (rng.gen::<f64>() - 0.5) * 100.0).collect(),
+        coords: (0..d).map(|_| (rng.gen::<f32>() - 0.5) * 100.0).collect(),
     };
     (0..n_random).map(|_| make_random_point()).collect()
 }

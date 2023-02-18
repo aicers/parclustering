@@ -2,50 +2,50 @@ use crate::bccp::{self, Bcp};
 use crate::edge::WeightedEdge;
 
 pub trait UFConstruct {
-    fn is_root(&self, i: f64) -> bool {
+    fn is_root(&self, i: i64) -> bool {
         true
     }
-    fn find(&mut self, i: f64) -> f64 {
-        0.
+    fn find(&mut self, i: i64) -> i64 {
+        0
     }
 }
 
 #[derive(Debug)]
 pub struct UnionFind {
-    parents: Vec<f64>,
+    parents: Vec<i64>,
 }
 impl UFConstruct for UnionFind {
-    fn is_root(&self, u: f64) -> bool {
-        return self.parents[u as usize] == -1.0;
+    fn is_root(&self, u: i64) -> bool {
+        return self.parents[u as usize] == -1;
     }
 
-    fn find(&mut self, i: f64) -> f64 {
+    fn find(&mut self, i: i64) -> i64 {
         let mut i = i;
         if self.is_root(i) {
-            return i as f64;
+            return i as i64;
         }
         let mut p = self.parents[i as usize];
 
         if self.is_root(p) {
-            return p as f64;
+            return p as i64;
         }
         while !self.is_root(p) {
             let gp = self.parents[p as usize];
             self.parents[i as usize] = gp;
             i = p;
-            p = (gp as usize) as f64;
+            p = (gp as usize) as i64;
         }
-        return p as f64;
+        return p as i64;
     }
 }
 
 impl UnionFind {
     pub fn new(n: usize) -> Self {
         Self {
-            parents: vec![-1.0; n],
+            parents: vec![-1; n],
         }
     }
-    fn union_roots(&mut self, u: f64, v: f64) {
+    fn union_roots(&mut self, u: i64, v: i64) {
         let (u, v) = if self.parents[v as usize] < self.parents[u as usize] {
             (v, u)
         } else {
@@ -56,8 +56,8 @@ impl UnionFind {
         self.parents[v as usize] = u;
     }
 
-    pub fn link(&mut self, u: f64, v: f64) {
-        self.parents[u as usize] = v as f64;
+    pub fn link(&mut self, u: i64, v: i64) {
+        self.parents[u as usize] = v as i64;
     }
 
     /*fn try_link(&mut self, u: usize, v: usize) -> bool {
@@ -68,16 +68,16 @@ impl UnionFind {
 type WghEdge = WeightedEdge;
 #[derive(Debug)]
 pub struct EdgeUnionFind {
-    parents: Vec<f64>,
+    parents: Vec<i64>,
     edges: Vec<WghEdge>,
 }
 
 impl UFConstruct for EdgeUnionFind {
-    fn is_root(&self, u: f64) -> bool {
-        self.parents[u as usize] == -1.0
+    fn is_root(&self, u: i64) -> bool {
+        self.parents[u as usize] == -1
     }
 
-    fn find(&mut self, i: f64) -> f64 {
+    fn find(&mut self, i: i64) -> i64 {
         let mut i = i;
         if self.is_root(i) {
             return i;
@@ -100,12 +100,12 @@ impl UFConstruct for EdgeUnionFind {
 impl EdgeUnionFind {
     pub fn new(n: usize) -> Self {
         Self {
-            parents: vec![-1.0; n],
+            parents: vec![-1; n],
             edges: vec![WeightedEdge::default(); n],
         }
     }
 
-    pub fn link(&mut self, u: f64, v: f64, u_real: f64, v_real: f64, weight: f64) {
+    pub fn link(&mut self, u: i64, v: i64, u_real: i64, v_real: i64, weight: f32) {
         self.edges[u as usize] = WghEdge::new_weighted(u_real, v_real, weight, false);
         self.parents[u as usize] = v;
     }
@@ -120,5 +120,25 @@ impl EdgeUnionFind {
             .filter(|e| !e.is_empty())
             .cloned()
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::union_find::UFConstruct;
+
+    use super::EdgeUnionFind;
+
+    #[test]
+    pub fn uf_test() {
+        let mut uf = EdgeUnionFind::new(10);
+        uf.link(2, 4, 3, 4, 1.);
+        uf.link(0, 2, 4, 5, 1.);
+        uf.link(6, 2, 5, 3, 3.);
+        uf.link(6, 4, 5, 3, 1.);
+        uf.link(1, 2, 3, 5, 2.);
+        println!("{:#?}", uf.find(4));
+        println!("{:#?}", uf);
     }
 }

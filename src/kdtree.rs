@@ -12,14 +12,14 @@ use std::collections::VecDeque;
 
 #[derive(Debug, Clone)]
 pub struct KDTree {
-    pub id: f64,
+    pub id: i64,
     pub points: Vec<Point>,
     pub split_value: Point,
     pub left_node: Option<Box<KDTree>>,
     pub right_node: Option<Box<KDTree>>,
     pub dimension: usize,
-    pub cd_min: f64,
-    pub cd_max: f64,
+    pub cd_min: f32,
+    pub cd_max: f32,
 }
 
 impl Ord for KDTree {
@@ -73,7 +73,7 @@ impl KDTree {
 
     pub fn empty() -> Self {
         Self {
-            id: -1.0,
+            id: -1,
             points: vec![Point::default()],
             split_value: Point::default(),
             left_node: None,
@@ -87,7 +87,7 @@ impl KDTree {
         let points_len = point_list.len();
         if points_len == 1 {
             return KDTree {
-                id: -1.0,
+                id: -1,
                 points: point_list.to_vec(),
                 split_value: point_list[0].clone(),
                 left_node: None,
@@ -98,7 +98,7 @@ impl KDTree {
             };
         } else if point_list.is_empty() {
             return KDTree {
-                id: -1.0,
+                id: -1,
                 points: point_list.to_vec(),
                 split_value: Point { coords: vec![0.] },
                 left_node: None,
@@ -129,9 +129,10 @@ impl KDTree {
         } else {
             None
         };
+        
 
         KDTree {
-            id: -1.0,
+            id: -1,
             points: point_list.to_vec(),
             split_value: pivot,
             dimension: dim,
@@ -149,22 +150,22 @@ impl KDTree {
         }
     }
     pub fn reset_id(&mut self) {
-        self.id = -1.0;
+        self.id = -1;
     }
 
-    pub fn set_id(&mut self, n: f64) {
+    pub fn set_id(&mut self, n: i64) {
         self.id = n;
     }
 
     pub fn has_id(&self) -> bool {
-        self.id != -1.0
+        self.id != -1
     }
 
-    pub fn get_id(&self) -> f64 {
+    pub fn get_id(&self) -> i64 {
         self.id
     }
 
-    pub fn get_min(&self, index_dim: usize) -> f64 {
+    pub fn get_min(&self, index_dim: usize) -> f32 {
         let mut points = self.points.clone();
         let max_elem_index = 0;
         let res = quickselect_by(&mut points, max_elem_index, &|a, b| {
@@ -186,7 +187,7 @@ impl KDTree {
             self.points[0].coords.len()
         }
     }
-    pub fn get_max(&self, index_dim: usize) -> f64 {
+    pub fn get_max(&self, index_dim: usize) -> f32 {
         let mut points = self.points.clone();
         let max_elem_index = points.len() - 1;
         let res = quickselect_by(&mut points, max_elem_index, &|a, b| {
@@ -198,8 +199,8 @@ impl KDTree {
         //self.points.iter().map(|point| Wrapper(point.coords[index_dim])).max().unwrap().0
     }
 
-    pub fn l_max(&self) -> f64 {
-        let mut max_val: f64 = 0.0;
+    pub fn l_max(&self) -> f32 {
+        let mut max_val: f32 = 0.0;
         let point_dim = self.dim();
         for d in 0..point_dim {
             let temp_val = self.get_max(d) - self.get_min(d);
@@ -210,7 +211,7 @@ impl KDTree {
         max_val
     }
 
-    pub fn diag(&self) -> f64 {
+    pub fn diag(&self) -> f32 {
         let mut res = 0.;
         if self.size() == 1 {
             return 0.;
@@ -219,26 +220,26 @@ impl KDTree {
                 let tmp = self.get_max(d) - self.get_min(d);
                 res += tmp * tmp;
             }
-            return f64::sqrt(res);
+            return f32::sqrt(res);
         }
     }
 
-    pub fn cd_max_calc(&mut self, core_dist: &Vec<f64>, point_set: &Vec<Point>) -> f64 {
+    pub fn cd_max_calc(&mut self, core_dist: &Vec<f32>, point_set: &Vec<Point>) -> f32 {
         let cd_list = self
             .points
             .iter()
             .map(|y| core_dist[point_set.iter().position(|x| x == y).unwrap()])
-            .collect::<Vec<f64>>();
-        cd_list.iter().fold(f64::NEG_INFINITY, |acc, &x| acc.max(x))
+            .collect::<Vec<f32>>();
+        cd_list.iter().fold(f32::NEG_INFINITY, |acc, &x| acc.max(x))
     }
 
-    pub fn cd_min_calc(&mut self, core_dist: &Vec<f64>, point_set: &Vec<Point>) -> f64 {
+    pub fn cd_min_calc(&mut self, core_dist: &Vec<f32>, point_set: &Vec<Point>) -> f32 {
         let cd_list = self
             .points
             .iter()
             .map(|y| core_dist[point_set.iter().position(|x| x == y).unwrap()])
-            .collect::<Vec<f64>>();
-        cd_list.iter().fold(f64::INFINITY, |acc, &x| acc.min(x))
+            .collect::<Vec<f32>>();
+        cd_list.iter().fold(f32::INFINITY, |acc, &x| acc.min(x))
     }
 
     pub fn nearest_neighbours(&self, point: &Point, k: usize) -> Vec<(Wrapper, Point)> {
@@ -292,7 +293,7 @@ mod tests {
         let n_random = 1_000_000;
         let mut make_random_point = || Point {
             coords: (0..100)
-                .map(|_| (rng.gen::<f64>() - 0.5) * 1000000.0)
+                .map(|_| (rng.gen::<f32>() - 0.5) * 1000000.0)
                 .collect(),
         };
         let mut random_points: Vec<Point> = (0..n_random).map(|_| make_random_point()).collect();
@@ -324,12 +325,12 @@ mod tests {
         println!("{:?}", wp_points);
         let closest_points: Vec<(f64, f64)> = closest_points
             .iter()
-            .map(|x| (x.1.coords[0], x.1.coords[1]))
+            .map(|x| (x.1.coords[0] as f64, x.1.coords[1] as f64))
             .collect();
         let wp_points = wp_points
             .iter()
-            .filter(|x| !closest_points.contains(&(x.coords[0], x.coords[1])))
-            .map(|x| (x.coords[0], x.coords[1]))
+            .filter(|x| !closest_points.contains(&(x.coords[0] as f64, x.coords[1] as f64)))
+            .map(|x| (x.coords[0] as f64, x.coords[1] as f64))
             .collect();
 
         let s1 = Plot::new(vec![(10., 8.)])

@@ -7,7 +7,7 @@ use crate::{
     union_find::{EdgeUnionFind, UnionFind},
 };
 
-pub fn mark_all(tree: &mut KDTree, n: f64) {
+pub fn mark_all(tree: &mut KDTree, n: i64) {
     if !tree.is_leaf() && tree.get_id() != n {
         if tree.size() > 2000 {
             rayon::join(
@@ -22,16 +22,17 @@ pub fn mark_all(tree: &mut KDTree, n: f64) {
                     }
                 },
             );
-        }
-    } else {
-        if let Some(ref mut left_node) = tree.left_node {
-            mark_all(left_node, n);
-        }
+        } else {
+            if let Some(ref mut left_node) = tree.left_node {
+                mark_all(left_node, n);
+            }
 
-        if let Some(ref mut right_node) = tree.right_node {
-            mark_all(right_node, n);
+            if let Some(ref mut right_node) = tree.right_node {
+                mark_all(right_node, n);
+            }
         }
     }
+    tree.set_id(n);
 }
 
 pub fn mark(node: &mut KDTree, uf: &mut Arc<Mutex<EdgeUnionFind>>, s: &Vec<Point>) {
@@ -40,7 +41,7 @@ pub fn mark(node: &mut KDTree, uf: &mut Arc<Mutex<EdgeUnionFind>>, s: &Vec<Point
             node,
             uf.lock()
                 .unwrap()
-                .find(s.iter().position(|x| *x == node.points[0]).unwrap() as f64),
+                .find(s.iter().position(|x| *x == node.points[0]).unwrap() as i64),
         );
         return;
     }
@@ -48,7 +49,7 @@ pub fn mark(node: &mut KDTree, uf: &mut Arc<Mutex<EdgeUnionFind>>, s: &Vec<Point
     node.set_id(
         uf.lock()
             .unwrap()
-            .find(s.iter().position(|x| *x == node.points[0]).unwrap() as f64),
+            .find(s.iter().position(|x| *x == node.points[0]).unwrap() as i64),
     );
 
     if node.is_leaf() {
@@ -57,7 +58,7 @@ pub fn mark(node: &mut KDTree, uf: &mut Arc<Mutex<EdgeUnionFind>>, s: &Vec<Point
                 != uf
                     .lock()
                     .unwrap()
-                    .find(s.iter().position(|x| *x == node.points[i]).unwrap() as f64)
+                    .find(s.iter().position(|x| *x == node.points[i]).unwrap() as i64)
             {
                 node.reset_id();
                 return;
