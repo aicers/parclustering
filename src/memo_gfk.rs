@@ -185,15 +185,15 @@ pub fn kruskal(e: &mut Vec<WEdge>, n: usize) -> Vec<i64> {
 pub fn batch_kruskal(e: &mut Vec<WEdge>, n: usize, uf: &mut Arc<Mutex<EdgeUnionFind>>) {
     let m = e.len();
     let k = std::cmp::min((5 * n) / 4, m);
-    println!("K Value {}",k);
+    println!("K Value {}", k);
     let mut iw: Vec<IndexedEdge> = (0..m)
         .map(|i| IndexedEdge::new(e[i].u as i64, e[i].v as i64, i as i64, e[i].weight))
         .collect();
 
-    let edge_less = |a:&IndexedEdge,b:&IndexedEdge| {
+    let edge_less = |a: &IndexedEdge, b: &IndexedEdge| {
         if a.weight < b.weight {
             std::cmp::Ordering::Less
-        } else if a.weight > b.weight{
+        } else if a.weight > b.weight {
             std::cmp::Ordering::Greater
         } else {
             a.id.cmp(&b.id)
@@ -201,10 +201,10 @@ pub fn batch_kruskal(e: &mut Vec<WEdge>, n: usize, uf: &mut Arc<Mutex<EdgeUnionF
     };
     iw.sort_by(edge_less);
 
-    println!("IW Len {:?}",iw.len());
+    println!("IW Len {:?}", iw.len());
 
     let mut r = vec![Reservation::default(); n];
-    println!("Reservation list len {}",r.len());
+    println!("Reservation list len {}", r.len());
     let iw_size = iw.len();
     let mut uf_step: Arc<Mutex<EdgeUnionFindStep>> = Arc::new(Mutex::new(EdgeUnionFindStep::new(
         &mut iw,

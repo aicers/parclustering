@@ -35,7 +35,7 @@ pub fn hdbscan(points: &mut Vec<Point>, min_pts: usize) -> Vec<WeightedEdge> {
     let mut _cd_max = f32::MIN;
 
     node_cd(&mut kdtree, &points, &core_dist, _cd_min, _cd_max);
-    let mut beta:i64 = 2;
+    let mut beta: i64 = 2;
     let mut rho_lo = -1.;
 
     let mut num_edges: usize = 0;
@@ -87,7 +87,7 @@ mod tests {
     #[test]
     fn hdbscan_test() {
         std::env::set_var("RUST_BACKTRACE", "full");
-        let mut point_set = sample_points();
+        let mut point_set = n_random_points(100, 5);
         let mut min_pts = 3;
 
         let hdbscan = hdbscan(&mut point_set, min_pts);
@@ -95,6 +95,6 @@ mod tests {
         println!("HDBSCAN {:?}", hdbscan.len());
         let num = point_set.len();
         let dend = dendrogram(hdbscan, num);
-        println!("Dendrogram {:?}",dend.len());
+        println!("Dendrogram {:#?}", dend);
     }
 }

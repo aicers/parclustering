@@ -129,7 +129,6 @@ impl KDTree {
         } else {
             None
         };
-        
 
         KDTree {
             id: -1,
