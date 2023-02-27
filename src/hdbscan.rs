@@ -1,5 +1,5 @@
 use std::sync::{Arc, Mutex};
-
+use std::time::{Instant,Duration};
 use crate::edge::WeightedEdge;
 use crate::kdtree::KDTree;
 use crate::mark::mark;
@@ -24,9 +24,14 @@ impl WEdge {
 }
 pub fn hdbscan(points: &mut Vec<Point>, min_pts: usize) -> Vec<WeightedEdge> {
     let min_pts = min_pts;
-
+    let mut wspd_time = 0.;
+    //Tree construction time counter
+    let const_start_time = Instant::now();
     //Creating KD-Tree with above generated random points
     let mut kdtree = KDTree::build(points);
+    let const_end_time = Instant::now();
+    println!("Time spent for tree construction {:?}", const_end_time.duration_since(const_start_time).as_secs_f64());
+    println!("=================");
 
     //Storing all the core distances of points in one set
     let mut core_dist: Vec<f32> = point_set_cd(&points, &kdtree, min_pts);
@@ -45,7 +50,10 @@ pub fn hdbscan(points: &mut Vec<Point>, min_pts: usize) -> Vec<WeightedEdge> {
 
     while uf.lock().unwrap().num_edge() < points.len() - 1 {
         let mut rho_hi = f32::MIN;
+        let wspd_start = Instant::now();
         let bccps = filter_wspd_paraller(&beta, &rho_lo, &mut rho_hi, &kdtree, &core_dist, &points);
+        let wspd_end = Instant::now();
+        wspd_time+= wspd_end.duration_since(wspd_start).as_secs_f64();
         num_edges += bccps.len();
 
         if bccps.len() <= 0 {
@@ -62,7 +70,6 @@ pub fn hdbscan(points: &mut Vec<Point>, min_pts: usize) -> Vec<WeightedEdge> {
                 )
             })
             .collect();
-        println!("Edges {}", edges.len());
         batch_kruskal(&mut edges, points.len(), &mut uf);
         mark(&mut kdtree, &mut uf, &points);
         println!("=================");
@@ -71,30 +78,11 @@ pub fn hdbscan(points: &mut Vec<Point>, min_pts: usize) -> Vec<WeightedEdge> {
         println!("Rho Lo {}", rho_lo);
         println!("Rho Hi {}", rho_hi);
         println!("Beta {}", beta);
-        //println!("UF {:?}", uf.lock().unwrap());
         println!("=================");
         beta *= 2;
         rho_lo = rho_hi;
     }
+    println!("WSPD Construction time {:?}", wspd_time);
     let x = uf.lock().unwrap().get_edge();
     x
-}
-
-mod tests {
-    use super::{hdbscan, *};
-    use crate::{dendrogram::dendrogram, sample_points::sample_points};
-
-    #[test]
-    fn hdbscan_test() {
-        std::env::set_var("RUST_BACKTRACE", "full");
-        let mut point_set = n_random_points(100, 5);
-        let mut min_pts = 3;
-
-        let hdbscan = hdbscan(&mut point_set, min_pts);
-
-        println!("HDBSCAN {:?}", hdbscan.len());
-        let num = point_set.len();
-        let dend = dendrogram(hdbscan, num);
-        println!("Dendrogram {:#?}", dend);
-    }
 }

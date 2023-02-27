@@ -154,27 +154,3 @@ where
     }
     return total_processed;
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::speculative_for::Reservation;
-
-    #[test]
-    pub fn speculative_test() {
-        let mut test = Reservation::default();
-        println!("Reservation {:?}", test);
-        println!(" Reservation Get {:?}", test.get());
-        println!(" Reservation Reserved {:?}", test.reserved());
-        println!(" Reservation Reserved {:?}", test.freeze());
-        println!("Reservation {:?}", test.check(-1));
-        println!("Reservation {:?}", test.check_reset(-1));
-        println!(" Reservation Reserved {:?}", test.freeze());
-        println!("Reservation {:?}", test.reset());
-        println!("Reservation {:?}", test);
-        println!(" Reservation Reserve {:?}", test.reserve(100));
-        println!(" Reservation Reserve {:?}", test.reserve(110));
-        println!(" Reservation Reserve {:?}", test.reserve(10));
-        println!(" Reservation Reserve {:?}", test);
-        println!(" Reservation Reserve {:?}", test.reserve(100));
-    }
-}

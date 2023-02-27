@@ -1,11 +1,9 @@
-use serde::Deserialize;
-
 use crate::wrapper::Wrapper;
 use std::{
     cmp::{Ord, Ordering},
     ops::Deref,
 };
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Point {
     pub coords: Vec<f32>,
 }

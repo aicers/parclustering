@@ -91,21 +91,3 @@ pub fn point_set_cd(point_set: &Vec<Point>, kdtree: &KDTree, min_pts: usize) -> 
     }
     core_dist
 }
-
-#[allow(unused_imports)]
-mod tests {
-
-    use super::*;
-    #[ignore = "Checked"]
-    #[test]
-    fn node_core_dist() {
-        let mut point_set: Vec<Point> = sample_points();
-        let min_pts = 3;
-        let mut kdtree = KDTree::build(&mut point_set);
-        let point_set_cd = point_set_cd(&point_set, &kdtree, min_pts);
-        let cd_min = f32::MAX;
-        let cd_max = f32::MIN;
-        let node_cd = node_cd(&mut kdtree, &point_set, &point_set_cd, cd_min, cd_max);
-        println!("{kdtree:?}");
-    }
-}

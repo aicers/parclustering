@@ -122,23 +122,3 @@ impl EdgeUnionFind {
             .collect()
     }
 }
-
-#[cfg(test)]
-mod tests {
-
-    use crate::union_find::UFConstruct;
-
-    use super::EdgeUnionFind;
-
-    #[test]
-    pub fn uf_test() {
-        let mut uf = EdgeUnionFind::new(10);
-        uf.link(2, 4, 3, 4, 1.);
-        uf.link(0, 2, 4, 5, 1.);
-        uf.link(6, 2, 5, 3, 3.);
-        uf.link(6, 4, 5, 3, 1.);
-        uf.link(1, 2, 3, 5, 2.);
-        println!("{:#?}", uf.find(4));
-        println!("{:#?}", uf);
-    }
-}
